@@ -36,73 +36,18 @@ An interactive clinical AI and WebGL platform that predicts stenosis risk across
 
 ---
 
-## 1. System Runtime Architecture & Data Flow
+---
 
-Below is the live runtime data pipeline connecting clinical input parameters to 3D GPU vertex color updates:
+## System Runtime Architecture
 
-```mermaid
-graph TD
-    subgraph UI ["1. User Interface & Interactive Diagnostic Stage"]
-        A["Patient Clinical Form<br/>(12 Variables: Demographics, ECG, Echo EF)"] -->|Input / Change Event| B["Client Payload Generator & Debounce"]
-        B -->|JSON Request| C["HTTP POST /api/predict"]
-        
-        M["Three.js 3D WebGL Canvas<br/>(OrbitControls & 60fps AnimationMixer)"] --> N["Raycaster & Camera-Facing<br/>Billboard Anatomy Labels"]
-        O["Accessible Clinical Readout Panel<br/>(ARIA Progressbars & WCAG Contrast)"]
-        O2["Damage Status Badges<br/>(Bold Medical Red #E63946 Alert)"]
-    end
-
-    subgraph API ["2. Flask REST Backend & Validation Gateway"]
-        C --> D{"Defensive Request<br/>Validation Gateway"}
-        D -->|Invalid Method| E1["HTTP 405 Method Not Allowed"]
-        D -->|Non-JSON Header| E2["HTTP 415 Unsupported Media Type"]
-        D -->|Malformed / Non-Dict| E3["HTTP 400 Bad Request"]
-        D -->|Out of Range / NaN / Inf| E4["HTTP 422 Unprocessable Entity"]
-        D -->|Validated Clean Payload| F["StandardScaler Matrix Transformer"]
-        
-        E1 --> A
-        E2 --> A
-        E3 --> A
-        E4 --> A
-    end
-
-    subgraph ML ["3. Multi-Target ML Inference Pipeline"]
-        F --> G1["Overall CAD Classifier<br/>(Balanced Random Forest)"]
-        F --> G2["LAD Artery Classifier<br/>(Left Anterior Descending)"]
-        F --> G3["LCX Artery Classifier<br/>(Left Circumflex)"]
-        F --> G4["RCA Artery Classifier<br/>(Right Coronary Artery)"]
-        
-        G1 --> H["Risk Probability Aggregator & Threshold Engine"]
-        G2 --> H
-        G3 --> H
-        G4 --> H
-        H --> I["HTTP 200 JSON Prediction Response<br/>(Risk %, Confidence, Levels)"]
-    end
-
-    subgraph DUAL_DISPATCH ["4. Dual Visual Diagnostic Feedback System"]
-        I -->|Update UI Readout| O
-        O --> O2
-        
-        I -->|Update 3D Heart| J["Territory Risk & Color Dispatcher"]
-        J --> K{"Stenosis Severity Check<br/>(Threshold >= 55%)"}
-        
-        K -->|0 Damaged Territories| L0["Normal / Baseline Gradient<br/>(Clinical Soft Cyan/Green)"]
-        K -->|1 Damaged Territory| L1["Single Damage Mode<br/>Stark Glowing White #FFFFFF"]
-        K -->|2+ Damaged Territories| L2["Multi-Damage Palette Mode<br/>LAD: White | LCX: Cyan | RCA: Gold"]
-        
-        L0 --> P["Direct GPU BufferAttribute Color Overdrive<br/>(HDR Float32Array on 20,139 Vertices)"]
-        L1 --> P
-        L2 --> P
-        
-        P --> Q["beating-heart.glb Skinned Mesh<br/>(Dynamic Territory Shading)"]
-        Q --> M
-    end
-```
+For the complete technical runtime data flow diagram detailing how patient clinical variables pass through defensive validation gateways, the 4-target Random Forest inference engine, and dual visual dispatch (3D GPU vertex color overdrive + Medical Red UI alert bars), please refer to the documentation:
+👉 **[docs/architecture_flow.md](docs/architecture_flow.md)**
 
 ---
 
-## 2. Project Development Lifecycle: Scratch to Deployment
+## How I Built This Project: Development Lifecycle (Scratch to Deployment)
 
-The complete 6-phase engineering lifecycle used to design, train, rig, build, and deploy this project:
+The complete 6-phase engineering lifecycle used to design, train, rig, build, and deploy this project from scratch:
 
 ```mermaid
 graph TD
@@ -127,7 +72,7 @@ graph TD
 
     %% PHASE 4: BACKEND
     subgraph P4 ["Phase 4: Defensive Flask Backend & Error Handling"]
-        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health, /flowchart)"]
+        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health)"]
         D1 --> D2["Defensive Input Validation Layer<br/>(isinstance dict, math.isfinite, Bounds Check)"]
         D2 --> D3["Standardized JSON Error Handlers<br/>(HTTP 400, 405, 415, 422, 500)"]
     end
@@ -159,7 +104,7 @@ cardiac-3d-risk/
 ├── Procfile                    # Gunicorn production entrypoint
 ├── requirements.txt            # Python dependencies
 ├── docs/
-│   ├── architecture_flow.md    # Detailed runtime architecture specification
+│   ├── architecture_flow.md    # System Runtime Architecture Flowchart (How project works)
 │   └── PROJECT_BUILD_GUIDE.md  # Step-by-step scratch-to-deployment roadmap
 ├── data/
 │   └── raw/                    # Extension of Z-Alizadeh Sani clinical dataset (.xlsx)
@@ -175,8 +120,7 @@ cardiac-3d-risk/
 │   ├── train.py                # 5-fold cross-validation & model training script
 │   └── predict.py              # Strict schema/range validation & inference engine
 ├── templates/
-│   ├── index.html              # Main interactive 3D clinical diagnostic workspace
-│   └── flowchart.html          # Interactive dual-flowchart viewer (/flowchart)
+│   └── index.html              # Main interactive 3D clinical diagnostic workspace
 └── static/
     ├── css/
     │   └── style.css           # Modern clinical UI stylesheet & WCAG contrast system
@@ -228,7 +172,6 @@ python app.py
 ```
 Open your browser and navigate to:
 - **Application Dashboard:** `http://localhost:5000`
-- **System Architecture Flowcharts:** `http://localhost:5000/flowchart`
 - **Health Check Endpoint:** `http://localhost:5000/health`
 
 ---
@@ -238,7 +181,6 @@ Open your browser and navigate to:
 | Endpoint | Method | Expected Content-Type | Response Codes | Description |
 |---|---|---|---|---|
 | `/` | `GET` | `text/html` | `200` | Main application diagnostic workspace |
-| `/flowchart` | `GET` | `text/html` | `200` | Interactive dual architecture flowcharts |
 | `/health` | `GET` | `application/json` | `200` | Server health and loaded model status |
 | `/api/metrics` | `GET` | `application/json` | `200` | 5-fold cross-validation performance metrics |
 | `/api/predict` | `POST` | `application/json` | `200`, `400`, `415`, `422` | Clinical risk prediction and territory scores |

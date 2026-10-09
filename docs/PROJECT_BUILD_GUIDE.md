@@ -27,7 +27,7 @@ graph TD
 
     %% PHASE 4: BACKEND
     subgraph P4 ["Phase 4: Defensive Flask Backend & Error Handling"]
-        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health, /flowchart)"]
+        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health)"]
         D1 --> D2["Defensive Input Validation Layer<br/>(isinstance dict, math.isfinite, Bounds Check)"]
         D2 --> D3["Standardized JSON Error Handlers<br/>(HTTP 400, 405, 415, 422, 500)"]
     end

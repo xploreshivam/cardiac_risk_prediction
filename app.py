@@ -26,10 +26,6 @@ def idx():
     return render_template("index.html", groups=gf(), metrics=b.metrics)
 
 
-# diagram
-@a.get("/diagram")
-def dgm():
-    return render_template("flowchart.html")
 
 
 # predict
