@@ -1,6 +1,5 @@
-"""Dataset loading and cleaning."""
 import pandas as pd
-from src.config import DATA_PATH, SHEET, FEATURE_COLUMNS
+from src.config import DATA_PATH, SHEET, FEATURES, FEATURE_COLUMNS
 
 
 def load_dataset() -> pd.DataFrame:
@@ -14,10 +13,13 @@ def load_dataset() -> pd.DataFrame:
     # The dataset spells female as "Fmale"
     df["Sex"] = (df["Sex"].astype(str).str.strip().str.lower() == "male").astype(int)
 
-    # Y/N text columns -> 1/0 (numeric columns are left alone)
-    for col in FEATURE_COLUMNS:
-        if not pd.api.types.is_numeric_dtype(df[col]):
-            df[col] = df[col].astype(str).str.strip().str.upper().isin(["Y", "YES"]).astype(int)
+    # Clean and cast each feature according to its defined type
+    for f in FEATURES:
+        col = f["column"]
+        if f["type"] == "number":
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(f["default"]).astype(float)
+        elif col != "Sex":
+            df[col] = df[col].astype(str).str.strip().str.upper().isin(["Y", "YES", "1", "TRUE"]).astype(int)
 
     for col in ("Cath", "LAD", "LCX", "RCA"):
         df[col] = df[col].astype(str).str.strip()

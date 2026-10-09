@@ -67,7 +67,6 @@
 
   // elements
   let hm = null, mx = null, tg = null, ca = null;
-  let damageColorAttr = null, damageWeightAttr = null;
   let currentDamageHighlights = {};
   ap.getDamageHighlights = function () { return currentDamageHighlights; };
   const lb = document.getElementById('stage-labels');
@@ -123,16 +122,6 @@
       if (hm && tg) {
         const ge = hm.geometry;
         const vc = ge.attributes.position.count;
-
-        // Custom damage color & weight attributes for direct pixel overwrite
-        const colArr = new Float32Array(vc * 3);
-        const wgtArr = new Float32Array(vc);
-        damageColorAttr = new THREE.BufferAttribute(colArr, 3);
-        damageWeightAttr = new THREE.BufferAttribute(wgtArr, 1);
-        ge.setAttribute('aDamageColor', damageColorAttr);
-        ge.setAttribute('aDamageWeight', damageWeightAttr);
-
-        // Fallback vertex color attribute
         const ar = new Float32Array(vc * 3);
         ar.fill(1.0);
         ca = new THREE.BufferAttribute(ar, 3);
@@ -140,42 +129,10 @@
 
         hm.material = hm.material.clone();
         hm.material.vertexColors = true;
-        hm.material.roughness = 0.35;
+        hm.material.roughness = 0.40;
         hm.material.metalness = 0.08;
-        hm.material.userData.uPulse = { value: 1.0 };
-        hm.material.customProgramCacheKey = function () { return 'cardiac_damage_shader_v4'; };
-
-        hm.material.onBeforeCompile = function (shader) {
-          shader.uniforms.uPulse = hm.material.userData.uPulse;
-          shader.vertexShader = shader.vertexShader.replace(
-            'void main() {',
-            `attribute vec3 aDamageColor;
-             attribute float aDamageWeight;
-             varying vec3 vDamageColor;
-             varying float vDamageWeight;
-             void main() {
-               vDamageColor = aDamageColor;
-               vDamageWeight = aDamageWeight;`
-          );
-          shader.fragmentShader = shader.fragmentShader.replace(
-            'void main() {',
-            `uniform float uPulse;
-             varying vec3 vDamageColor;
-             varying float vDamageWeight;
-             void main() {`
-          );
-          shader.fragmentShader = shader.fragmentShader.replace(
-            '#include <dithering_fragment>',
-            `#include <dithering_fragment>
-             if (vDamageWeight > 0.01) {
-               float w = min(1.0, vDamageWeight);
-               // Overwrite diffuse color with pure luminous highlight
-               gl_FragColor.rgb = mix(gl_FragColor.rgb, vDamageColor, w * 0.95);
-               // Add vibrant alert emission
-               gl_FragColor.rgb += vDamageColor * (w * 0.32 * uPulse);
-             }`
-          );
-        };
+        hm.material.emissive = new THREE.Color(0x222222);
+        hm.material.emissiveIntensity = 0.35;
         hm.material.needsUpdate = true;
       }
 
@@ -208,10 +165,26 @@
     if (d2) damagedList.push('LCX');
     if (d3) damagedList.push('RCA');
 
-    // Distinct palette
-    const COLOR_WHITE = { r: 1.0, g: 1.0, b: 1.0, hex: '#FFFFFF', name: 'White' };
-    const COLOR_CYAN  = { r: 0.0, g: 0.92, b: 1.0, hex: '#00F5D4', name: 'Cyan' };
-    const COLOR_GOLD  = { r: 1.0, g: 0.72, b: 0.05, hex: '#FFB703', name: 'Gold' };
+    // Distinct palettes:
+    // Pure White uses HDR overdrive (5.0, 5.0, 5.0) which forces all red/blue pixels to pure 100% white!
+    const COLOR_WHITE = {
+      vesselColor: new THREE.Color(6.5, 6.5, 6.5),
+      myoColor: new THREE.Color(4.5, 4.5, 4.5),
+      hex: '#FFFFFF',
+      name: 'White'
+    };
+    const COLOR_CYAN = {
+      vesselColor: new THREE.Color(0.0, 5.0, 6.0),
+      myoColor: new THREE.Color(0.0, 3.5, 4.5),
+      hex: '#00F5D4',
+      name: 'Cyan'
+    };
+    const COLOR_GOLD = {
+      vesselColor: new THREE.Color(5.5, 3.8, 0.0),
+      myoColor: new THREE.Color(4.0, 2.8, 0.0),
+      hex: '#FFB703',
+      name: 'Gold'
+    };
 
     const highlightConfig = {};
     if (damagedList.length === 1) {
@@ -225,68 +198,41 @@
     }
     currentDamageHighlights = highlightConfig;
 
-    if (hm && tg) {
-      if (damageColorAttr && damageWeightAttr) {
-        const cArr = damageColorAttr.array;
-        const wArr = damageWeightAttr.array;
+    if (hm && ca && tg) {
+      const arr = ca.array;
 
-        for (let i = 0; i < tg.length; i++) {
-          const t = tg[i] || 0;
-          let hl = null;
-          let weight = 0.0;
+      // Color lookup table:
+      // Index 0: Normal myocardium -> 1.0 (original texture)
+      // Index 1: LAD vessel
+      // Index 2: LCX vessel
+      // Index 3: RCA vessel
+      // Index 4: LAD supplied myocardium
+      // Index 5: LCX supplied myocardium
+      // Index 6: RCA supplied myocardium
+      const normalCol = new THREE.Color(1.0, 1.0, 1.0);
+      const selVesselCol = new THREE.Color(2.2, 2.2, 2.2);
+      const selMyoCol = new THREE.Color(1.5, 1.5, 1.5);
 
-          if (t === 1 && highlightConfig['LAD']) { hl = highlightConfig['LAD']; weight = 1.0; }
-          else if (t === 4 && highlightConfig['LAD']) { hl = highlightConfig['LAD']; weight = 0.92; }
-          else if (t === 2 && highlightConfig['LCX']) { hl = highlightConfig['LCX']; weight = 1.0; }
-          else if (t === 5 && highlightConfig['LCX']) { hl = highlightConfig['LCX']; weight = 0.92; }
-          else if (t === 3 && highlightConfig['RCA']) { hl = highlightConfig['RCA']; weight = 1.0; }
-          else if (t === 6 && highlightConfig['RCA']) { hl = highlightConfig['RCA']; weight = 0.92; }
-          else if (sl) {
-            if ((t === 1 && sl === 'LAD') || (t === 2 && sl === 'LCX') || (t === 3 && sl === 'RCA')) {
-              hl = COLOR_WHITE; weight = 0.75;
-            } else if ((t === 4 && sl === 'LAD') || (t === 5 && sl === 'LCX') || (t === 6 && sl === 'RCA')) {
-              hl = COLOR_WHITE; weight = 0.45;
-            }
-          }
+      const tc = [
+        normalCol,
+        highlightConfig['LAD'] ? highlightConfig['LAD'].vesselColor : (sl === 'LAD' ? selVesselCol : rc(p1)),
+        highlightConfig['LCX'] ? highlightConfig['LCX'].vesselColor : (sl === 'LCX' ? selVesselCol : rc(p2)),
+        highlightConfig['RCA'] ? highlightConfig['RCA'].vesselColor : (sl === 'RCA' ? selVesselCol : rc(p3)),
+        highlightConfig['LAD'] ? highlightConfig['LAD'].myoColor : (sl === 'LAD' ? selMyoCol : normalCol),
+        highlightConfig['LCX'] ? highlightConfig['LCX'].myoColor : (sl === 'LCX' ? selMyoCol : normalCol),
+        highlightConfig['RCA'] ? highlightConfig['RCA'].myoColor : (sl === 'RCA' ? selMyoCol : normalCol)
+      ];
 
-          if (hl && weight > 0) {
-            cArr[i * 3] = hl.r;
-            cArr[i * 3 + 1] = hl.g;
-            cArr[i * 3 + 2] = hl.b;
-            wArr[i] = weight;
-          } else {
-            cArr[i * 3] = 0;
-            cArr[i * 3 + 1] = 0;
-            cArr[i * 3 + 2] = 0;
-            wArr[i] = 0.0;
-          }
-        }
-        damageColorAttr.needsUpdate = true;
-        damageWeightAttr.needsUpdate = true;
+      for (let i = 0; i < tg.length; i++) {
+        const c = tc[tg[i] || 0];
+        arr[i * 3] = c.r;
+        arr[i * 3 + 1] = c.g;
+        arr[i * 3 + 2] = c.b;
       }
-
-      if (ca) {
-        const arr = ca.array;
-        const tc = [
-          new THREE.Color(1, 1, 1),
-          highlightConfig['LAD'] ? new THREE.Color(highlightConfig['LAD'].hex) : (sl === 'LAD' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p1)),
-          highlightConfig['LCX'] ? new THREE.Color(highlightConfig['LCX'].hex) : (sl === 'LCX' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p2)),
-          highlightConfig['RCA'] ? new THREE.Color(highlightConfig['RCA'].hex) : (sl === 'RCA' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p3)),
-          highlightConfig['LAD'] ? new THREE.Color(2.2, 2.2, 2.2) : new THREE.Color(1, 1, 1),
-          highlightConfig['LCX'] ? new THREE.Color(highlightConfig['LCX'].hex) : new THREE.Color(1, 1, 1),
-          highlightConfig['RCA'] ? new THREE.Color(highlightConfig['RCA'].hex) : new THREE.Color(1, 1, 1)
-        ];
-
-        for (let i = 0; i < tg.length; i++) {
-          const c = tc[tg[i] || 0];
-          arr[i * 3] = c.r;
-          arr[i * 3 + 1] = c.g;
-          arr[i * 3 + 2] = c.b;
-        }
-        ca.needsUpdate = true;
-      }
+      ca.needsUpdate = true;
     }
 
+    // Update floating tags on heart
     ['LAD', 'LCX', 'RCA'].forEach((k) => {
       const it = ad[k];
       const is = (k === sl);
@@ -345,7 +291,7 @@
     if (!hm || !tg) return null;
     ry.setFromCamera(pt(e), cm);
     const it = ry.intersectObject(hm, false);
-    if (it.length > 0 && it[0].face) {
+    if (it.length > 0 && it[0].face && it[0].face.a >= 0 && it[0].face.a < tg.length) {
       const v = tg[it[0].face.a];
       if (v === 1 || v === 4) return 'LAD';
       if (v === 2 || v === 5) return 'LCX';
@@ -402,7 +348,11 @@
     cm.aspect = w / h;
     cm.updateProjectionMatrix();
   }
-  new ResizeObserver(rs).observe(st);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(rs).observe(st);
+  } else {
+    window.addEventListener('resize', rs);
+  }
   rs();
 
   // projection
@@ -412,8 +362,9 @@
     fc.set(0, 0, 1).applyQuaternion(gp.quaternion);
     ['LAD', 'LCX', 'RCA'].forEach((k) => {
       const it = ad[k];
-      if (!it.mid) return;
-      const sh = it.tag && !it.tag.hidden && fc.z > 0.15;
+      if (!it.mid || !it.tag) return;
+      // Visible when model is loaded and facing towards the camera
+      const sh = Boolean(hm && fc.z > 0.12);
       it.tag.hidden = !sh;
       if (!sh) return;
       tp2.copy(it.mid);
@@ -433,8 +384,8 @@
     if (!rm) {
       if (mx) mx.update(dt);
       if (!inx) gp.rotation.y = Math.sin(t * 0.4) * 0.25;
-      if (hm && hm.material && hm.material.userData && hm.material.userData.uPulse) {
-        hm.material.userData.uPulse.value = 0.82 + 0.28 * Math.sin(t * 3.8);
+      if (hm && hm.material) {
+        hm.material.emissiveIntensity = 0.30 + 0.15 * Math.sin(t * 3.8);
       }
     }
     rd.render(sc, cm);

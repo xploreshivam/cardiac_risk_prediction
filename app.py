@@ -38,7 +38,11 @@ def pred():
     if not request.is_json and request.content_length:
         return jsonify({"error": "Request content-type must be application/json"}), 415
     try:
-        p = request.get_json(silent=False) or {}
+        p = request.get_json(silent=False)
+        if p is None:
+            p = {}
+        elif not isinstance(p, dict):
+            return jsonify({"error": "JSON payload must be a JSON object (key-value mapping)."}), 400
     except Exception:
         return jsonify({"error": "Malformed JSON payload in request."}), 400
 
@@ -77,6 +81,14 @@ def e404(e):
     if request.path.startswith("/api/"):
         return jsonify({"error": "Endpoint not found."}), 404
     return render_template("index.html", groups=gf(), metrics=b.metrics), 404
+
+
+# not allowed
+@a.errorhandler(405)
+def e405(e):
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "HTTP method not allowed for this endpoint."}), 405
+    return jsonify({"error": "Method not allowed."}), 405
 
 
 # failure

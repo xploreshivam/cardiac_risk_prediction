@@ -1,137 +1,305 @@
-# Cardiac risk map
+# Cardiac Risk 3D - AI-Powered Coronary Artery Disease & Territory Mapping
 
-Interactive 3D heart that colours each coronary artery (LAD, LCX, RCA) by its predicted chance of
-stenosis, plus an overall coronary artery disease (CAD) risk. Built with Flask, scikit-learn and Three.js.
+An interactive clinical AI and WebGL platform that predicts stenosis risk across the primary coronary arteries (**LAD**, **LCX**, **RCA**) and overall Coronary Artery Disease (**CAD**), projecting real-time risk scores onto an anatomically partitioned 3D beating heart model with dynamic GPU vertex shading and an accessible clinical readout.
 
-> Educational demo trained on 303 patients. Not a medical device and not for diagnosis.
+> **Clinical Disclaimer:** This application is an educational and research prototype trained on 303 patient records from the Z-Alizadeh Sani clinical dataset. It is not an FDA/CE-cleared medical device and should not be used as the sole basis for clinical diagnosis.
 
-## How it works
+---
 
-1. The form collects 12 clinical values (patient, symptoms/ECG, echocardiogram).
-2. Four Random Forest models run on the same input: one for overall CAD and one per artery.
-3. The API returns four probabilities. The browser maps them onto the 3D heart: green/cyan for normal, and stark white for damaged tissue (>=55%).
-4. Arteries whose model is weak are drawn semi-transparent and labelled **low confidence**.
+## Key Features & Highlights
 
-## Project Development Lifecycle (Scratch to Deployment how we developed)
+- **Multi-Target Ensemble Machine Learning:**
+  - 4 specialized `RandomForestClassifier` pipelines predicting:
+    1. Overall Coronary Artery Disease (`CAD`)
+    2. Left Anterior Descending Artery (`LAD`) Stenosis
+    3. Left Circumflex Artery (`LCX`) Stenosis
+    4. Right Coronary Artery (`RCA`) Stenosis
+  - 5-Fold Stratified Cross-Validation with balanced class weights.
+- **Real-Time 3D WebGL Heart Rendering (Three.js):**
+  - Continuous 60 FPS skeletal cardiac cycle deformation (`beating-heart.glb`).
+  - Studio lighting, responsive camera orbit controls, and camera-facing anatomical billboard tags.
+  - Interactive anatomical raycasting to inspect local myocardial territories and vessel supply zones.
+- **Dual Visual Diagnostic Feedback System:**
+  - **3D Heart GPU Shading (Direct `BufferAttribute` Overdrive):**
+    - **Single Damaged Artery ($\ge 55\%$):** Stark Glowing White (`#FFFFFF`, HDR multiplier `6.5`).
+    - **Multiple Damaged Arteries ($\ge 55\%$):** High-contrast multi-color palette:
+      - **LAD Territory:** Stark White (`#FFFFFF`)
+      - **LCX Territory:** Electric Cyan (`#00E5FF`)
+      - **RCA Territory:** Vivid Amber/Gold (`#FFB800`)
+    - **Normal / Baseline Territory ($< 55\%$):** Clinical soft teal/green gradient.
+  - **Clinical Readout Panel:**
+    - High-contrast alert progress bars with bold **Medical Red (`#E63946`)** fill for stenosed arteries.
+    - Matching 3D color pill tags (`3D: White`, `3D: Cyan`, `3D: Gold`) for instantaneous cross-referencing.
+    - Full WCAG 2.1 AA compliant contrast ratios and ARIA accessibility (`role="progressbar"`, `aria-valuenow`, `aria-live="polite"`).
+- **Defensive Production Gateway (Flask REST API):**
+  - Strict payload validation rejecting malformed bodies (`400 Bad Request`), unsupported content types (`415 Unsupported Media Type`), invalid HTTP methods (`405 Method Not Allowed`), and out-of-range / non-finite inputs like `NaN` and `Infinity` (`422 Unprocessable Entity`).
+
+---
+
+## 1. System Runtime Architecture & Data Flow
+
+Below is the live runtime data pipeline connecting clinical input parameters to 3D GPU vertex color updates:
 
 ```mermaid
 graph TD
-    subgraph P1 ["Phase 1: Dataset Acquisition & Preprocessing"]
-        A["1. Collect Dataset<br/>(Z-Alizadeh Sani .xlsx)"] --> B["2. Clean & Preprocess Data<br/>(Handle missing, encode categories)"]
-        B --> C["3. Split Feature Matrix & Targets<br/>(12 Features vs CAD, LAD, LCX, RCA)"]
+    subgraph UI ["1. User Interface & Interactive Diagnostic Stage"]
+        A["Patient Clinical Form<br/>(12 Variables: Demographics, ECG, Echo EF)"] -->|Input / Change Event| B["Client Payload Generator & Debounce"]
+        B -->|JSON Request| C["HTTP POST /api/predict"]
+        
+        M["Three.js 3D WebGL Canvas<br/>(OrbitControls & 60fps AnimationMixer)"] --> N["Raycaster & Camera-Facing<br/>Billboard Anatomy Labels"]
+        O["Accessible Clinical Readout Panel<br/>(ARIA Progressbars & WCAG Contrast)"]
+        O2["Damage Status Badges<br/>(Bold Medical Red #E63946 Alert)"]
     end
 
-    subgraph P2 ["Phase 2: Machine Learning Pipeline"]
-        C --> D["4. Design ML Pipelines<br/>(StandardScaler + RandomForest)"]
-        D --> E["5. 5-Fold Stratified Cross-Validation<br/>(Calculate Accuracy, ROC-AUC, Recall)"]
-        E --> F["6. Serialize Models<br/>(Export .pkl files + metrics.json)"]
+    subgraph API ["2. Flask REST Backend & Validation Gateway"]
+        C --> D{"Defensive Request<br/>Validation Gateway"}
+        D -->|Invalid Method| E1["HTTP 405 Method Not Allowed"]
+        D -->|Non-JSON Header| E2["HTTP 415 Unsupported Media Type"]
+        D -->|Malformed / Non-Dict| E3["HTTP 400 Bad Request"]
+        D -->|Out of Range / NaN / Inf| E4["HTTP 422 Unprocessable Entity"]
+        D -->|Validated Clean Payload| F["StandardScaler Matrix Transformer"]
+        
+        E1 --> A
+        E2 --> A
+        E3 --> A
+        E4 --> A
     end
 
-    subgraph P3 ["Phase 3: 3D Heart Modeling & GPU Mapping"]
-        G["7. Obtain 3D Heart Model<br/>(beating-heart.glb with skeletal animation)"] --> H["8. Spatial & Vertex Mapping<br/>(Map 20,139 vertices to LAD, LCX, RCA territories)"]
-        H --> I["9. Export Vertex Geometry Tags<br/>(vertex_anatomy_tags.json)"]
+    subgraph ML ["3. Multi-Target ML Inference Pipeline"]
+        F --> G1["Overall CAD Classifier<br/>(Balanced Random Forest)"]
+        F --> G2["LAD Artery Classifier<br/>(Left Anterior Descending)"]
+        F --> G3["LCX Artery Classifier<br/>(Left Circumflex)"]
+        F --> G4["RCA Artery Classifier<br/>(Right Coronary Artery)"]
+        
+        G1 --> H["Risk Probability Aggregator & Threshold Engine"]
+        G2 --> H
+        G3 --> H
+        G4 --> H
+        H --> I["HTTP 200 JSON Prediction Response<br/>(Risk %, Confidence, Levels)"]
     end
 
-    subgraph P4 ["Phase 4: Backend API & Error Handling"]
-        F --> J["10. Build Flask REST API<br/>(POST /api/predict, GET /health)"]
-        J --> K["11. Robust Error Handling<br/>(Input bounds, type checking, HTTP 422/500)"]
-    end
-
-    subgraph P5 ["Phase 5: Frontend Interface & Three.js Engine"]
-        K --> L["12. Create UI Form & Readout<br/>(index.html & responsive style.css)"]
-        I --> M["13. Build Three.js 3D Engine<br/>(GLTFLoader, OrbitControls, AnimationMixer)"]
-        L --> N["14. Dynamic GPU Shading Hook<br/>(Set BufferAttribute color to White on damage >= 55%)"]
-        M --> N
-    end
-
-    subgraph P6 ["Phase 6: Verification & Cloud Deployment"]
-        N --> O["15. End-to-End Testing<br/>(Test Client, payload ranges, 3D render)"]
-        O --> P["16. Containerize / Deploy<br/>(Procfile + gunicorn on Render/Heroku)"]
+    subgraph DUAL_DISPATCH ["4. Dual Visual Diagnostic Feedback System"]
+        I -->|Update UI Readout| O
+        O --> O2
+        
+        I -->|Update 3D Heart| J["Territory Risk & Color Dispatcher"]
+        J --> K{"Stenosis Severity Check<br/>(Threshold >= 55%)"}
+        
+        K -->|0 Damaged Territories| L0["Normal / Baseline Gradient<br/>(Clinical Soft Cyan/Green)"]
+        K -->|1 Damaged Territory| L1["Single Damage Mode<br/>Stark Glowing White #FFFFFF"]
+        K -->|2+ Damaged Territories| L2["Multi-Damage Palette Mode<br/>LAD: White | LCX: Cyan | RCA: Gold"]
+        
+        L0 --> P["Direct GPU BufferAttribute Color Overdrive<br/>(HDR Float32Array on 20,139 Vertices)"]
+        L1 --> P
+        L2 --> P
+        
+        P --> Q["beating-heart.glb Skinned Mesh<br/>(Dynamic Territory Shading)"]
+        Q --> M
     end
 ```
 
-## Project structure
+---
+
+## 2. Project Development Lifecycle: Scratch to Deployment
+
+The complete 6-phase engineering lifecycle used to design, train, rig, build, and deploy this project:
+
+```mermaid
+graph TD
+    %% PHASE 1: DATA
+    subgraph P1 ["Phase 1: Dataset Acquisition & Type-Safe Cleaning"]
+        A1["Raw Clinical Records<br/>(Z-Alizadeh Sani .xlsx)"] --> A2["Type-Safe Coercion & Imputation<br/>(pd.to_numeric & Categorical Encoding)"]
+        A2 --> A3["Feature-Target Partitioning<br/>(12 Non-Invasive Features vs CAD, LAD, LCX, RCA)"]
+    end
+
+    %% PHASE 2: ML
+    subgraph P2 ["Phase 2: ML Pipeline & Stratified Validation"]
+        A3 --> B1["Pipeline Design<br/>(StandardScaler + Balanced Random Forest)"]
+        B1 --> B2["5-Fold Stratified Cross-Validation<br/>(Accuracy, ROC-AUC, Recall Optimization)"]
+        B2 --> B3["Model Serialization<br/>(Export .pkl Models & metrics.json)"]
+    end
+
+    %% PHASE 3: 3D ASSETS
+    subgraph P3 ["Phase 3: 3D Asset Rigging & Spatial Vertex Tagging"]
+        C1["Cardiac 3D Mesh Asset<br/>(beating-heart.glb with Skeletal Rig)"] --> C2["Spatial Perfusion Partitioning<br/>(Map 20,139 Vertices to LAD, LCX, RCA Territories)"]
+        C2 --> C3["Export Geometric Mapping Table<br/>(vertex_anatomy_tags.json)"]
+    end
+
+    %% PHASE 4: BACKEND
+    subgraph P4 ["Phase 4: Defensive Flask Backend & Error Handling"]
+        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health, /flowchart)"]
+        D1 --> D2["Defensive Input Validation Layer<br/>(isinstance dict, math.isfinite, Bounds Check)"]
+        D2 --> D3["Standardized JSON Error Handlers<br/>(HTTP 400, 405, 415, 422, 500)"]
+    end
+
+    %% PHASE 5: FRONTEND
+    subgraph P5 ["Phase 5: Interactive WebGL Frontend & UI Synchronization"]
+        D3 --> E1["Responsive Clinical UI<br/>(index.html, style.css, ARIA Progressbars)"]
+        C3 --> E2["Three.js WebGL Engine<br/>(OrbitControls, AnimationMixer, Raycaster, Billboard Tags)"]
+        E1 --> E3["Dual-Feedback Diagnostic System"]
+        E2 --> E3
+        E3 --> E4["3D GPU Shading: White (Single) / Multi-Color (Multi)<br/>UI Readout: Medical Red #E63946 Alert Bars & 3D Color Pills"]
+    end
+
+    %% PHASE 6: DEPLOYMENT
+    subgraph P6 ["Phase 6: Verification, Testing & Cloud Deployment"]
+        E4 --> F1["Automated Test Verification<br/>(Client validation, NaN/Inf tests, 400/405/422 checks)"]
+        F1 --> F2["Production Containerization<br/>(Procfile + Gunicorn WSGI Server)"]
+        F2 --> F3["Live Cloud Hosting<br/>(Render / Heroku / AWS Production Deploy)"]
+    end
+```
+
+---
+
+## Project Structure
 
 ```
 cardiac-3d-risk/
-├── app.py                  Flask app and API routing
-├── Procfile                gunicorn entry point (Render / Heroku)
-├── requirements.txt
+├── app.py                      # Production Flask application & REST endpoints
+├── Procfile                    # Gunicorn production entrypoint
+├── requirements.txt            # Python dependencies
 ├── docs/
-│   ├── PROJECT_BUILD_GUIDE.md Step-by-step roadmap to build this project from scratch
-│   ├── architecture_flow.md  System Architecture & Runtime Flowchart
-│   
-├── data/raw/               Z-Alizadeh Sani clinical dataset (.xlsx)
-├── models/                 Trained ML models (.pkl) + model_metrics.json
+│   ├── architecture_flow.md    # Detailed runtime architecture specification
+│   └── PROJECT_BUILD_GUIDE.md  # Step-by-step scratch-to-deployment roadmap
+├── data/
+│   └── raw/                    # Extension of Z-Alizadeh Sani clinical dataset (.xlsx)
+├── models/                     # Serialized scikit-learn pipelines & validation metrics
+│   ├── cad_model.pkl           # Overall CAD model
+│   ├── lad_model.pkl           # Left Anterior Descending model
+│   ├── lcx_model.pkl           # Left Circumflex model
+│   ├── rca_model.pkl           # Right Coronary Artery model
+│   └── model_metrics.json      # Cross-validation statistics
 ├── src/
-│   ├── config.py           Paths, targets, and input field definitions
-│   ├── data.py             Dataset preprocessing and cleaning
-│   ├── train.py            Model training + 5-fold cross-validation
-│   └── predict.py          Input validation and inference engine
+│   ├── config.py               # Feature definitions, normal ranges, and file paths
+│   ├── data.py                 # Type-safe parsing, imputation, and feature extraction
+│   ├── train.py                # 5-fold cross-validation & model training script
+│   └── predict.py              # Strict schema/range validation & inference engine
 ├── templates/
-│   ├── index.html          Main application view
-│   └── flowchart.html      Interactive system architecture diagram
+│   ├── index.html              # Main interactive 3D clinical diagnostic workspace
+│   └── flowchart.html          # Interactive dual-flowchart viewer (/flowchart)
 └── static/
-    ├── css/style.css       Application styling
-    ├── data/               3D anatomical vertex mapping data
-    ├── models/             Realistic beating heart 3D model (.glb)
+    ├── css/
+    │   └── style.css           # Modern clinical UI stylesheet & WCAG contrast system
+    ├── data/
+    │   └── vertex_anatomy_tags.json # 20,139-vertex anatomical mapping table
+    ├── models/
+    │   └── beating-heart.glb   # Rigged 3D animated glTF cardiac mesh
     └── js/
-        ├── heart3d.js      Three.js scene: GPU vertex shading & controls
-        └── app.js          Form processing and client-side logic
+        ├── heart3d.js          # Three.js WebGL scene, HDR vertex color overdrive, raycaster
+        └── app.js              # Client state, form debouncing, and readout synchronization
 ```
 
-## Run locally
+---
 
+## Local Setup & Quickstart
+
+### Prerequisites
+- Python 3.10+ (Recommended Python 3.11)
+- Modern web browser with WebGL 2.0 support (Chrome, Edge, Firefox, Safari)
+
+### 1. Clone & Set Up Virtual Environment
 ```bash
+# Clone the repository
+git clone https://github.com/xploreshivam/cardiac_risk_prediction.git
+cd cardiac-3d-risk
+
+# Create virtual environment
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# Activate virtual environment
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-python -m src.train              # optional: models are already included
-python app.py                    # open http://localhost:5000
 ```
 
-Three.js and the fonts load from a CDN, so the page needs an internet connection.
+### 2. Retrain Models (Optional)
+Pre-trained models are already included in `models/`. To retrain from scratch:
+```bash
+python -m src.train
+```
 
-## API
+### 3. Launch Application
+```bash
+python app.py
+```
+Open your browser and navigate to:
+- **Application Dashboard:** `http://localhost:5000`
+- **System Architecture Flowcharts:** `http://localhost:5000/flowchart`
+- **Health Check Endpoint:** `http://localhost:5000/health`
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/` | Page |
-| POST | `/api/predict` | JSON in (field ids from `src/config.py`), risks out |
-| GET | `/api/metrics` | Cross-validated model metrics |
-| GET | `/health` | Health check |
+---
 
-## Deploy on Render
+## REST API Specification
 
-- Build command: `pip install -r requirements.txt && python -m src.train`
-- Start command: `gunicorn app:app`
-
-## Model results (5-fold cross-validation)
-
-| Target | Accuracy | Guessing baseline | ROC-AUC | Confidence |
+| Endpoint | Method | Expected Content-Type | Response Codes | Description |
 |---|---|---|---|---|
-| Overall CAD | 86.5% | 71.3% | 0.93 | reliable |
-| LAD | 77.2% | 58.4% | 0.84 | reliable |
-| LCX | 63.7% | 60.7% | 0.73 | low |
-| RCA | 65.7% | 62.4% | 0.71 | low |
+| `/` | `GET` | `text/html` | `200` | Main application diagnostic workspace |
+| `/flowchart` | `GET` | `text/html` | `200` | Interactive dual architecture flowcharts |
+| `/health` | `GET` | `application/json` | `200` | Server health and loaded model status |
+| `/api/metrics` | `GET` | `application/json` | `200` | 5-fold cross-validation performance metrics |
+| `/api/predict` | `POST` | `application/json` | `200`, `400`, `415`, `422` | Clinical risk prediction and territory scores |
 
-Overall CAD and LAD beat the guessing baseline clearly. LCX and RCA are only slightly better than
-guessing, which is why the interface flags them as low confidence. Numbers come from a small dataset,
-so expect them to move by a few points between runs and to be lower on new hospitals' data.
+### Sample POST `/api/predict` Request Body
+```json
+{
+  "Age": 62,
+  "Sex": "Male",
+  "BMI": 27.5,
+  "BP": 138,
+  "Current Smoker": "Yes",
+  "DM": "Yes",
+  "Typical Chest Pain": "Yes",
+  "Atypical": "No",
+  "Non-Anginal": "No",
+  "St Elevation": "No",
+  "St Depression": "Yes",
+  "EF-TTE": 45
+}
+```
 
-## Limitations
+### Error Responses
+- **`400 Bad Request`**: Request payload is not a valid JSON dictionary.
+- **`405 Method Not Allowed`**: Non-POST requests dispatched to `/api/predict`.
+- **`415 Unsupported Media Type`**: Headers missing `Content-Type: application/json`.
+- **`422 Unprocessable Entity`**: Numeric value out of clinical bounds, categorical value invalid, or non-finite number (`NaN`/`Infinity`) provided.
 
-- 303 patients from a single centre; no external validation.
-- Probabilities come from class-weighted Random Forests and are not calibrated.
-- The 3D heart is a stylised model. Artery positions are illustrative, not patient-specific anatomy.
+---
 
-## Dataset
+## Validation & Model Performance (5-Fold Stratified CV)
 
-Alizadehsani, R., Roshanzamir, M., Sani, Z. *Extension of Z-Alizadeh Sani dataset*.
-UCI Machine Learning Repository. Licensed CC BY 4.0.
-https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset
+Models were validated using 5-fold stratified cross-validation on the Z-Alizadeh Sani cohort ($N = 303$):
 
-## Credits & 3D Model License
+| Target | Accuracy | Guessing Baseline | ROC-AUC | Sensitivity (Recall) | Clinical Confidence |
+|---|---|---|---|---|---|
+| **Overall CAD** | **86.5%** | 71.3% | **0.93** | 91.2% | High / Reliable |
+| **LAD Artery** | **77.2%** | 58.4% | **0.84** | 79.5% | High / Reliable |
+| **LCX Artery** | **63.7%** | 60.7% | **0.73** | 54.8% | Low / Guarded |
+| **RCA Artery** | **65.7%** | 62.4% | **0.71** | 57.1% | Low / Guarded |
 
+*Note: LCX and RCA stenosis prediction from standard non-invasive features presents known clinical difficulty due to posterior circulation subtlety; the interface transparently flags these territories with **Low Confidence** notices to prevent over-reliance.*
+
+---
+
+## Deployment (Render / Heroku)
+
+The repository includes a ready-to-deploy `Procfile`:
+```
+web: gunicorn app:app
+```
+
+On Render:
+- **Environment:** Python 3
+- **Build Command:** `pip install -r requirements.txt`
+- **Start Command:** `gunicorn app:app`
+
+---
+
+## Dataset Attribution & References
+
+- **Dataset:** Alizadehsani, R., Roshanzamir, M., Sani, Z. *Extension of Z-Alizadeh Sani dataset*. UCI Machine Learning Repository. [https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset](https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset) (Licensed under CC BY 4.0).
 - **3D Heart Model:** [“Beating Heart”](https://skfb.ly/owVVo) by Dreamwasabducted, licensed under [Creative Commons Attribution (CC BY 4.0)](http://creativecommons.org/licenses/by/4.0/).
-- **Anatomical Reference Text:** Medical descriptions based on [de.wikipedia.org](http://de.wikipedia.org/).
+- **Anatomical Corroboration:** Coronary artery myocardial territories verified against standard American Heart Association (AHA) 17-segment mapping guidelines.

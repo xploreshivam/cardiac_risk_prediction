@@ -22,7 +22,7 @@ def build_pipeline() -> Pipeline:
         ("scaler", StandardScaler()),
         ("rf", RandomForestClassifier(
             n_estimators=300, max_depth=6, min_samples_leaf=2,
-            class_weight="balanced", random_state=42, n_jobs=-1)),
+            class_weight="balanced", random_state=42, n_jobs=1)),
     ])
 
 

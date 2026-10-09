@@ -6,6 +6,8 @@ import pandas as pd
 from src.config import MODELS_DIR, METRICS_PATH, FEATURES, FEATURE_COLUMNS, TARGETS, ARTERIES
 
 
+import math
+
 # levels
 def rl(p: float) -> str:
     if p < 0.25:
@@ -25,6 +27,8 @@ def cr(f: dict, r):
         v = float(r)
     except (TypeError, ValueError):
         raise ValueError(f"{f['label']} must be a number.")
+    if not math.isfinite(v):
+        raise ValueError(f"{f['label']} must be a valid finite number.")
     if f["type"] == "number":
         if not f["min"] <= v <= f["max"]:
             raise ValueError(f"{f['label']} must be between {f['min']} and {f['max']}.")

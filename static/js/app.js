@@ -64,12 +64,19 @@
     }
   }
 
+  // high-contrast clinical color palette for white card backgrounds
+  function clinicalColorForPanel(p) {
+    if (p < 0.25) return '#26734D'; // dark medical green (>4.5:1 contrast)
+    if (p < 0.55) return '#A86500'; // dark amber (>4.5:1 contrast)
+    return '#B3263E';              // clinical red
+  }
+
   // renderer
   function rn() {
     const ov = rs.overall;
     const bg = $('overall-pct');
     bg.textContent = pc(ov.risk) + '%';
-    bg.style.color = window.Heart3D.colorFor(ov.risk);
+    bg.style.color = clinicalColorForPanel(ov.risk);
     $('overall-level').textContent = ov.level + ' chance of coronary artery disease';
 
     const mp = { overall: ov.risk };
@@ -84,10 +91,15 @@
     r.forEach((rw) => {
       const k = rw.dataset.artery, a = rs.arteries[k], lw = a.confidence === 'low';
       const fl = rw.querySelector('.fill');
+      const bar = rw.querySelector('.bar');
       const dmg = a.risk >= 0.55;
       const hl = hlMap[k];
 
       fl.style.width = pc(a.risk) + '%';
+      if (bar) {
+        bar.setAttribute('aria-valuenow', String(pc(a.risk)));
+      }
+
       if (dmg) {
         // Red color for damage in bottom card:
         fl.style.background = '#E63946';
@@ -120,43 +132,59 @@
   // details
   function rd() {
     if (!s) {
-      d.textContent = 'Select an artery on the heart, or from this list, to read what it supplies and its validation reliability.';
+      d.innerHTML = '<span class="detail-hint">Select an artery on the heart, or from the list above, to read what it supplies and its validation reliability.</span>';
       return;
     }
-    let tx = m[s][0] + '. ' + m[s][1];
+    let html = '<div class="detail-header"><strong class="detail-name">' + m[s][0] + ' (' + s + ')</strong>: ' + m[s][1] + '</div>';
     if (rs) {
       const at = rs.arteries[s];
-      tx += ' Predicted chance of stenosis: ' + pc(at.risk) + '% (' + at.level.toLowerCase() +
-        '). Model accuracy: ' + pc(at.accuracy) + '% (ROC-AUC: ' + at.auc.toFixed(2) + ').';
+      const isDmg = at.risk >= 0.55;
+      html += '<div class="detail-badges">' +
+        '<span class="detail-badge ' + (isDmg ? 'badge-danger' : 'badge-safe') + '">Stenosis: ' + pc(at.risk) + '% (' + at.level + ')</span>' +
+        '<span class="detail-metric">Accuracy: <strong>' + pc(at.accuracy) + '%</strong></span>' +
+        '<span class="detail-metric">ROC-AUC: <strong>' + at.auc.toFixed(2) + '</strong></span>' +
+      '</div>';
       if (at.confidence === 'low') {
-        tx += ' [Low Confidence Notice]: In tabular cardiac datasets, LCX & RCA show high class imbalance and overlapping clinical features, making cross-validated accuracy closer to baseline. Shown with dashed/muted indicator for academic integrity.';
+        html += '<div class="detail-callout callout-low"><strong>Low Confidence Notice:</strong> High class imbalance in clinical records brings validation metrics close to baseline. Illustrated with dashed border for academic honesty.</div>';
       } else {
-        tx += ' [Reliable Model]: Strong cross-validated accuracy and discriminative power for this artery.';
+        html += '<div class="detail-callout callout-good"><strong>Reliable Model:</strong> High cross-validated accuracy and discriminative power for this coronary territory.</div>';
       }
     }
-    d.textContent = tx;
+    d.innerHTML = html;
   }
 
-  // selection
+  // selection coordinator
+  function updateSelection(nm) {
+    s = (s === nm) ? null : nm;
+    r.forEach((rw) => rw.setAttribute('aria-pressed', String(rw.dataset.artery === s)));
+    if (window.Heart3D && window.Heart3D.select) {
+      window.Heart3D.select(s);
+    }
+    rd();
+  }
+
+  // selection from 3D scene
   window.Heart3D.onSelect((nm) => {
     s = nm;
     r.forEach((rw) => rw.setAttribute('aria-pressed', String(rw.dataset.artery === nm)));
     rd();
   });
 
-  // clicks
+  // selection from list clicks
   r.forEach((rw) => rw.addEventListener('click', () => {
     const ky = rw.dataset.artery;
-    window.Heart3D.select(s === ky ? null : ky);
+    updateSelection(ky);
   }));
 
   // submission
   f.addEventListener('submit', (ev) => { ev.preventDefault(); pd(); });
 
   // autosync
-  f.addEventListener('input', () => {
+  function triggerAutoSync() {
     if (!rs) return;
     clearTimeout(tm);
     tm = setTimeout(pd, 300);
-  });
+  }
+  f.addEventListener('input', triggerAutoSync);
+  f.addEventListener('change', triggerAutoSync);
 })();

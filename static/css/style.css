@@ -36,30 +36,42 @@ h1 { margin: 0; font: 600 clamp(1.7rem, 3.2vw, 2.4rem)/1.1 "Newsreader", Georgia
 
 .readout { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .overall { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.overall-pct { font: 600 3rem/1 "Newsreader", Georgia, serif; min-width: 3ch; }
+.overall-pct { font: 600 3rem/1 "Newsreader", Georgia, serif; min-width: 2.2ch; color: var(--muted); }
 .overall-level { color: var(--muted); }
 .arteries { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
-.artery-row { width: 100%; display: grid; grid-template-columns: 1fr 52px; gap: 4px 12px; align-items: center;
+.artery-row { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
   padding: 10px 12px; text-align: left; font: inherit; color: inherit; cursor: pointer;
-  background: #fff; border: 1px solid var(--line); border-radius: 10px; transition: border-color .15s, background .15s; }
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; transition: border-color .15s, background .15s, box-shadow .15s; }
 .artery-row[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
 .artery-name { grid-column: 1; }
-.val { grid-column: 2; grid-row: 1; text-align: right; font-weight: 600; }
+.val { grid-column: 2; grid-row: 1; text-align: right; font-weight: 600; min-width: 4ch; }
 .bar { grid-column: 1 / 2; grid-row: 2; height: 8px; border-radius: 4px; background: #E3EAEC; overflow: hidden; position: relative; }
 .fill { display: block; height: 100%; width: 0; background: #8FA3AB; transition: width .35s ease; }
 .artery-row.is-low .fill {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.45) 5px, rgba(255,255,255,0.45) 10px);
   opacity: 0.72;
 }
-.conf { grid-column: 2; grid-row: 2; text-align: right; font-size: .75rem; color: var(--muted); }
+.conf { grid-column: 2; grid-row: 2; text-align: right; font-size: .75rem; color: var(--muted); min-width: 80px; }
 .artery-row.is-low .conf { color: #A86500; font-weight: 600; }
 .artery-row.is-low { border-style: dashed; }
 .artery-row.is-damaged { border: 2px solid #B3263E; background: #FFF5F5; box-shadow: 0 2px 8px rgba(179, 38, 62, 0.08); }
+.artery-row.is-damaged[aria-pressed="true"] { border-color: #B3263E !important; box-shadow: 0 0 0 2px rgba(179, 38, 62, 0.4) !important; }
 .artery-row.is-damaged:hover { background: #FFEAEA; }
 .artery-row.is-damaged .conf { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 .dmg-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #B3263E; color: #FFFFFF; font-weight: 700; font-size: 0.70rem; letter-spacing: 0.3px; line-height: 1.2; }
 .hl-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; background: var(--hlc, #FFFFFF); color: #0E2530; font-weight: 700; font-size: 0.70rem; border: 1px solid rgba(0,0,0,0.18); box-shadow: 0 0 8px var(--hlc, rgba(255,255,255,0.7)); line-height: 1.2; }
-.detail { margin: 12px 0 0; color: var(--muted); font-size: .94rem; }
+
+.detail { margin: 14px 0 0; color: var(--muted); font-size: .92rem; line-height: 1.5; padding: 12px; background: #F8FAFB; border-radius: 8px; border: 1px solid #E2E8EA; }
+.detail-hint { font-style: italic; color: var(--muted); }
+.detail-header { margin-bottom: 8px; color: var(--ink); }
+.detail-badges { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+.detail-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem; }
+.badge-danger { background: #B3263E; color: #fff; }
+.badge-safe { background: #EDF7F2; color: #26734D; border: 1px solid #C3E6D5; }
+.detail-metric { font-size: 0.80rem; color: var(--muted); background: #EDF1F3; padding: 2px 7px; border-radius: 4px; }
+.detail-callout { font-size: 0.82rem; padding: 8px 10px; border-radius: 6px; line-height: 1.45; }
+.callout-low { background: #FFF9ED; border-left: 3px solid #D9A23A; color: #8A5B00; }
+.callout-good { background: #F2FBF6; border-left: 3px solid #3E8E6B; color: #1E6646; }
 
 .form { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 18px 18px; }
 fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 14px 0 6px; }
