@@ -1,0 +1,60 @@
+{
+  "n_patients": 303,
+  "cv_folds": 5,
+  "features": [
+    "Age",
+    "Sex",
+    "BMI",
+    "DM",
+    "HTN",
+    "Current Smoker",
+    "BP",
+    "Typical Chest Pain",
+    "Atypical",
+    "Tinversion",
+    "EF-TTE",
+    "Region RWMA"
+  ],
+  "targets": {
+    "CAD": {
+      "positive_rate": 0.713,
+      "baseline_accuracy": 0.713,
+      "accuracy": 0.865,
+      "roc_auc": 0.93,
+      "f1": 0.905,
+      "recall": 0.903,
+      "precision": 0.907,
+      "confidence": "reliable"
+    },
+    "LAD": {
+      "positive_rate": 0.584,
+      "baseline_accuracy": 0.584,
+      "accuracy": 0.772,
+      "roc_auc": 0.845,
+      "f1": 0.806,
+      "recall": 0.808,
+      "precision": 0.806,
+      "confidence": "reliable"
+    },
+    "LCX": {
+      "positive_rate": 0.393,
+      "baseline_accuracy": 0.607,
+      "accuracy": 0.637,
+      "roc_auc": 0.727,
+      "f1": 0.565,
+      "recall": 0.588,
+      "precision": 0.547,
+      "confidence": "low"
+    },
+    "RCA": {
+      "positive_rate": 0.376,
+      "baseline_accuracy": 0.624,
+      "accuracy": 0.657,
+      "roc_auc": 0.711,
+      "f1": 0.562,
+      "recall": 0.579,
+      "precision": 0.553,
+      "confidence": "low"
+    }
+  }
+}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecture Flow Diagram - Cardiac 3D Risk</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 30px 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0E2530;
+      color: #EDF1F2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #FFFFFF;
+    }
+    p {
+      margin: 0 0 24px;
+      color: #8FA3AB;
+      font-size: 0.95rem;
+    }
+    .card {
+      background: #142E3B;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      padding: 24px;
+      max-width: 1000px;
+      width: 100%;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      overflow-x: auto;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+    .back {
+      margin-top: 20px;
+      color: #1DD1A1;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .back:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Cardiac 3D Risk - System Architecture</h1>
+  <p>End-to-End Data Pipeline from Clinical Input to Real-Time 3D GPU Vertex Shading</p>
+
+  <div class="card">
+    <div class="mermaid">
+graph TD
+    subgraph UI ["User Interface Layer"]
+        A["Patient Clinical Form"] --> B["Payload Generator"]
+        B --> C["HTTP POST /api/predict"]
+        M["Interactive 3D Stage"] --> N["Anatomical Raycasting"]
+        O["Result Readout Panel"]
+    end
+
+    subgraph API ["Flask Backend Engine"]
+        C --> D{"Schema & Range Validation"}
+        D -->|Validation Failed| E["HTTP 422 JSON Error"]
+        D -->|Valid| F["Matrix Transformer"]
+        E --> A
+    end
+
+    subgraph ML ["Machine Learning Inference Pipeline"]
+        F --> G1["Overall CAD Classifier"]
+        F --> G2["LAD Artery Classifier"]
+        F --> G3["LCX Artery Classifier"]
+        F --> G4["RCA Artery Classifier"]
+        G1 --> H["Risk Probability Aggregator"]
+        G2 --> H
+        G3 --> H
+        G4 --> H
+    end
+
+    subgraph GPU ["Three.js 3D Heart Renderer"]
+        H --> I["HTTP 200 Prediction Result"]
+        I --> O
+        I --> J["Territory Risk Dispatcher"]
+        J --> K{"Stenosis Risk Check"}
+        K -->|Risk >= 55%| L1["Stark White Shading #FFFFFF"]
+        K -->|Risk < 55%| L2["Clinical Gradient Normal/Mild"]
+        L1 --> P["Direct GPU Buffer Attribute Update"]
+        L2 --> P
+        P --> Q["beating-heart.glb Skinned Mesh"]
+        Q --> M
+    end
+    </div>
+  </div>
+
+  <a class="back" href="/">&larr; Back to Cardiac Risk Map Application</a>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#142E3B',
+        primaryColor: '#1B6F8A',
+        primaryTextColor: '#FFFFFF',
+        primaryBorderColor: '#2B8DAA',
+        lineColor: '#1DD1A1',
+        secondaryColor: '#D97706',
+        tertiaryColor: '#0E2530'
+      }
+    });
+  </script>
+</body>
+</html>

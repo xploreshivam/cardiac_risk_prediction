@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cardiac risk map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h1>Cardiac risk map</h1>
+      <p class="lede">Enter clinical patient metrics to visualize coronary stenosis probability and mapped myocardial damage on the interactive 3D heart.</p>
+    </div>
+    <a href="/diagram" style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:#142E3B; color:#1DD1A1; border:1px solid rgba(255,255,255,0.15); border-radius:8px; text-decoration:none; font-size:0.88rem; font-weight:600;">System Flow Diagram &rarr;</a>
+  </header>
+
+  <div class="layout">
+    <div class="left">
+      <div id="stage" aria-label="Interactive 3D heart. Drag to rotate, click an artery to select it.">
+        <div id="stage-labels"></div>
+        <div class="stage-tools">
+          <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+          <button type="button" id="zoom-out" aria-label="Zoom out">&minus;</button>
+          <button type="button" id="reset-view">Reset view</button>
+        </div>
+      </div>
+
+      <section class="readout" aria-live="polite">
+        <div class="overall">
+          <span id="overall-pct" class="overall-pct">&ndash;</span>
+          <span id="overall-level" class="overall-level">Press Calculate risk to see the result.</span>
+        </div>
+        <ul class="arteries">
+          {% for key, name in [('LAD','Left anterior descending'),('LCX','Left circumflex'),('RCA','Right coronary artery')] %}
+          <li>
+            <button type="button" class="artery-row" data-artery="{{ key }}" aria-pressed="false">
+              <span class="artery-name"><strong>{{ key }}</strong> {{ name }}</span>
+              <span class="bar"><span class="fill"></span></span>
+              <span class="val">&ndash;</span>
+              <span class="conf"></span>
+            </button>
+          </li>
+          {% endfor %}
+        </ul>
+        <p id="artery-detail" class="detail">Select an artery on the heart, or from this list, to read what it supplies.</p>
+      </section>
+    </div>
+
+    <form id="risk-form" class="form" novalidate>
+      {% for group, fields in groups.items() %}
+      <fieldset>
+        <legend>{{ group }}</legend>
+        <div class="fields">
+          {% for f in fields %}
+          <div class="field">
+            <label for="{{ f.id }}">{{ f.label }}{% if f.unit %} <span class="unit">({{ f.unit }})</span>{% endif %}</label>
+            {% if f.type == 'number' %}
+            <input id="{{ f.id }}" data-field="{{ f.id }}" type="number" min="{{ f.min }}" max="{{ f.max }}" step="{{ f.step }}" value="{{ f.default }}" inputmode="decimal">
+            {% else %}
+            <select id="{{ f.id }}" data-field="{{ f.id }}">
+              {% for label, value in f.options %}<option value="{{ value }}" {% if value == f.default %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </fieldset>
+      {% endfor %}
+      <p id="form-error" class="error" role="alert"></p>
+      <button type="submit" class="primary">Calculate risk</button>
+      <details class="model-info">
+        <summary>How reliable is this model?</summary>
+        <table>
+          <thead><tr><th>Target</th><th>Accuracy</th><th>Guessing baseline</th><th>ROC-AUC</th></tr></thead>
+          <tbody>
+            {% for key, m in metrics.targets.items() %}
+            <tr><td>{{ 'Overall CAD' if key == 'CAD' else key }}</td><td>{{ '%.1f' % (m.accuracy * 100) }}%</td><td>{{ '%.1f' % (m.baseline_accuracy * 100) }}%</td><td>{{ '%.2f' % m.roc_auc }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p>{{ metrics.cv_folds }}-fold cross-validation evaluated on {{ metrics.n_patients }} patients.</p>
+      </details>
+  </div>
+  <footer style="margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--muted); text-align: center; line-height: 1.6;">
+    3D Model: <a href="https://skfb.ly/owVVo" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">“Beating Heart”</a> by Dreamwasabducted, licensed under <a href="http://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Creative Commons Attribution (CC BY 4.0)</a>. Anatomical text references by <a href="http://de.wikipedia.org/" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">de.wikipedia.org</a>.
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="{{ url_for('static', filename='js/heart3d.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
