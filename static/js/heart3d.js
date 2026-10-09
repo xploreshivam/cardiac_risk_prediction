@@ -67,6 +67,9 @@
 
   // elements
   let hm = null, mx = null, tg = null, ca = null;
+  let damageColorAttr = null, damageWeightAttr = null;
+  let currentDamageHighlights = {};
+  ap.getDamageHighlights = function () { return currentDamageHighlights; };
   const lb = document.getElementById('stage-labels');
 
   // badge
@@ -120,6 +123,16 @@
       if (hm && tg) {
         const ge = hm.geometry;
         const vc = ge.attributes.position.count;
+
+        // Custom damage color & weight attributes for direct pixel overwrite
+        const colArr = new Float32Array(vc * 3);
+        const wgtArr = new Float32Array(vc);
+        damageColorAttr = new THREE.BufferAttribute(colArr, 3);
+        damageWeightAttr = new THREE.BufferAttribute(wgtArr, 1);
+        ge.setAttribute('aDamageColor', damageColorAttr);
+        ge.setAttribute('aDamageWeight', damageWeightAttr);
+
+        // Fallback vertex color attribute
         const ar = new Float32Array(vc * 3);
         ar.fill(1.0);
         ca = new THREE.BufferAttribute(ar, 3);
@@ -127,10 +140,42 @@
 
         hm.material = hm.material.clone();
         hm.material.vertexColors = true;
-        hm.material.roughness = 0.4;
+        hm.material.roughness = 0.35;
         hm.material.metalness = 0.08;
-        hm.material.emissive = new THREE.Color(0x222222);
-        hm.material.emissiveIntensity = 0.35;
+        hm.material.userData.uPulse = { value: 1.0 };
+        hm.material.customProgramCacheKey = function () { return 'cardiac_damage_shader_v4'; };
+
+        hm.material.onBeforeCompile = function (shader) {
+          shader.uniforms.uPulse = hm.material.userData.uPulse;
+          shader.vertexShader = shader.vertexShader.replace(
+            'void main() {',
+            `attribute vec3 aDamageColor;
+             attribute float aDamageWeight;
+             varying vec3 vDamageColor;
+             varying float vDamageWeight;
+             void main() {
+               vDamageColor = aDamageColor;
+               vDamageWeight = aDamageWeight;`
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            'void main() {',
+            `uniform float uPulse;
+             varying vec3 vDamageColor;
+             varying float vDamageWeight;
+             void main() {`
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            '#include <dithering_fragment>',
+            `#include <dithering_fragment>
+             if (vDamageWeight > 0.01) {
+               float w = min(1.0, vDamageWeight);
+               // Overwrite diffuse color with pure luminous highlight
+               gl_FragColor.rgb = mix(gl_FragColor.rgb, vDamageColor, w * 0.95);
+               // Add vibrant alert emission
+               gl_FragColor.rgb += vDamageColor * (w * 0.32 * uPulse);
+             }`
+          );
+        };
         hm.material.needsUpdate = true;
       }
 
@@ -158,43 +203,108 @@
     const p1 = r.LAD ? r.LAD.p : 0, p2 = r.LCX ? r.LCX.p : 0, p3 = r.RCA ? r.RCA.p : 0;
     const d1 = p1 >= 0.55, d2 = p2 >= 0.55, d3 = p3 >= 0.55;
 
-    if (hm && ca && tg) {
-      const arr = ca.array;
-      const tc = [
-        new THREE.Color(1, 1, 1),
-        d1 ? cl.w : (sl === 'LAD' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p1)),
-        d2 ? cl.w : (sl === 'LCX' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p2)),
-        d3 ? cl.w : (sl === 'RCA' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p3)),
-        d1 ? new THREE.Color(2.2, 2.2, 2.2) : new THREE.Color(1, 1, 1),
-        d2 ? new THREE.Color(2.2, 2.2, 2.2) : new THREE.Color(1, 1, 1),
-        d3 ? new THREE.Color(2.2, 2.2, 2.2) : new THREE.Color(1, 1, 1)
-      ];
+    const damagedList = [];
+    if (d1) damagedList.push('LAD');
+    if (d2) damagedList.push('LCX');
+    if (d3) damagedList.push('RCA');
 
-      for (let i = 0; i < tg.length; i++) {
-        const c = tc[tg[i] || 0];
-        arr[i * 3] = c.r;
-        arr[i * 3 + 1] = c.g;
-        arr[i * 3 + 2] = c.b;
+    // Distinct palette
+    const COLOR_WHITE = { r: 1.0, g: 1.0, b: 1.0, hex: '#FFFFFF', name: 'White' };
+    const COLOR_CYAN  = { r: 0.0, g: 0.92, b: 1.0, hex: '#00F5D4', name: 'Cyan' };
+    const COLOR_GOLD  = { r: 1.0, g: 0.72, b: 0.05, hex: '#FFB703', name: 'Gold' };
+
+    const highlightConfig = {};
+    if (damagedList.length === 1) {
+      // Single damaged area -> pure white highlight
+      highlightConfig[damagedList[0]] = COLOR_WHITE;
+    } else if (damagedList.length >= 2) {
+      // Multiple damaged areas -> each gets a distinct color
+      if (d1) highlightConfig['LAD'] = COLOR_WHITE;
+      if (d2) highlightConfig['LCX'] = (d1 ? COLOR_CYAN : COLOR_WHITE);
+      if (d3) highlightConfig['RCA'] = (d1 && d2 ? COLOR_GOLD : (d1 || d2 ? COLOR_CYAN : COLOR_WHITE));
+    }
+    currentDamageHighlights = highlightConfig;
+
+    if (hm && tg) {
+      if (damageColorAttr && damageWeightAttr) {
+        const cArr = damageColorAttr.array;
+        const wArr = damageWeightAttr.array;
+
+        for (let i = 0; i < tg.length; i++) {
+          const t = tg[i] || 0;
+          let hl = null;
+          let weight = 0.0;
+
+          if (t === 1 && highlightConfig['LAD']) { hl = highlightConfig['LAD']; weight = 1.0; }
+          else if (t === 4 && highlightConfig['LAD']) { hl = highlightConfig['LAD']; weight = 0.92; }
+          else if (t === 2 && highlightConfig['LCX']) { hl = highlightConfig['LCX']; weight = 1.0; }
+          else if (t === 5 && highlightConfig['LCX']) { hl = highlightConfig['LCX']; weight = 0.92; }
+          else if (t === 3 && highlightConfig['RCA']) { hl = highlightConfig['RCA']; weight = 1.0; }
+          else if (t === 6 && highlightConfig['RCA']) { hl = highlightConfig['RCA']; weight = 0.92; }
+          else if (sl) {
+            if ((t === 1 && sl === 'LAD') || (t === 2 && sl === 'LCX') || (t === 3 && sl === 'RCA')) {
+              hl = COLOR_WHITE; weight = 0.75;
+            } else if ((t === 4 && sl === 'LAD') || (t === 5 && sl === 'LCX') || (t === 6 && sl === 'RCA')) {
+              hl = COLOR_WHITE; weight = 0.45;
+            }
+          }
+
+          if (hl && weight > 0) {
+            cArr[i * 3] = hl.r;
+            cArr[i * 3 + 1] = hl.g;
+            cArr[i * 3 + 2] = hl.b;
+            wArr[i] = weight;
+          } else {
+            cArr[i * 3] = 0;
+            cArr[i * 3 + 1] = 0;
+            cArr[i * 3 + 2] = 0;
+            wArr[i] = 0.0;
+          }
+        }
+        damageColorAttr.needsUpdate = true;
+        damageWeightAttr.needsUpdate = true;
       }
-      ca.needsUpdate = true;
+
+      if (ca) {
+        const arr = ca.array;
+        const tc = [
+          new THREE.Color(1, 1, 1),
+          highlightConfig['LAD'] ? new THREE.Color(highlightConfig['LAD'].hex) : (sl === 'LAD' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p1)),
+          highlightConfig['LCX'] ? new THREE.Color(highlightConfig['LCX'].hex) : (sl === 'LCX' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p2)),
+          highlightConfig['RCA'] ? new THREE.Color(highlightConfig['RCA'].hex) : (sl === 'RCA' ? new THREE.Color(1.5, 1.5, 1.5) : rc(p3)),
+          highlightConfig['LAD'] ? new THREE.Color(2.2, 2.2, 2.2) : new THREE.Color(1, 1, 1),
+          highlightConfig['LCX'] ? new THREE.Color(highlightConfig['LCX'].hex) : new THREE.Color(1, 1, 1),
+          highlightConfig['RCA'] ? new THREE.Color(highlightConfig['RCA'].hex) : new THREE.Color(1, 1, 1)
+        ];
+
+        for (let i = 0; i < tg.length; i++) {
+          const c = tc[tg[i] || 0];
+          arr[i * 3] = c.r;
+          arr[i * 3 + 1] = c.g;
+          arr[i * 3 + 2] = c.b;
+        }
+        ca.needsUpdate = true;
+      }
     }
 
     ['LAD', 'LCX', 'RCA'].forEach((k) => {
       const it = ad[k];
       const is = (k === sl);
       const pr = r[k] ? r[k].p : 0;
-      const dg = pr >= 0.55;
+      const dg = highlightConfig[k];
 
       if (it.tag) {
         it.tag.classList.toggle('is-selected', is);
+        it.tag.classList.toggle('is-damaged', Boolean(dg));
         if (dg) {
-          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% [DAMAGED AREA - WHITE]';
-          it.tag.style.setProperty('--c', '#FFFFFF');
-          it.tag.style.background = '#FFFFFF';
-          it.tag.style.color = '#B3263E';
-          it.tag.style.boxShadow = '0 0 16px rgba(255, 255, 255, 0.95)';
+          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% [DAMAGED - ' + dg.name.toUpperCase() + ']';
+          it.tag.style.setProperty('--c', dg.hex);
+          it.tag.style.background = dg.hex;
+          it.tag.style.color = '#0E2530';
+          it.tag.style.fontWeight = '700';
+          it.tag.style.boxShadow = '0 0 16px ' + dg.hex;
         } else if (k === 'LCX' || k === 'RCA') {
-          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% (Low confidence)';
+          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% (Low conf)';
           it.tag.style.setProperty('--c', '#FF9F43');
           it.tag.style.background = 'rgba(14, 37, 48, 0.88)';
           it.tag.style.color = '#FFFFFF';
@@ -323,6 +433,9 @@
     if (!rm) {
       if (mx) mx.update(dt);
       if (!inx) gp.rotation.y = Math.sin(t * 0.4) * 0.25;
+      if (hm && hm.material && hm.material.userData && hm.material.userData.uPulse) {
+        hm.material.userData.uPulse.value = 0.82 + 0.28 * Math.sin(t * 3.8);
+      }
     }
     rd.render(sc, cm);
     pl();

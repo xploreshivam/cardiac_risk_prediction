@@ -75,26 +75,45 @@
     const mp = { overall: ov.risk };
     r.forEach((rw) => {
       const k = rw.dataset.artery, a = rs.arteries[k], lw = a.confidence === 'low';
+      mp[k] = { p: a.risk, low: lw };
+    });
+
+    window.Heart3D.setRisks(mp);
+    const hlMap = window.Heart3D.getDamageHighlights ? window.Heart3D.getDamageHighlights() : {};
+
+    r.forEach((rw) => {
+      const k = rw.dataset.artery, a = rs.arteries[k], lw = a.confidence === 'low';
       const fl = rw.querySelector('.fill');
       const dmg = a.risk >= 0.55;
+      const hl = hlMap[k];
+
       fl.style.width = pc(a.risk) + '%';
       if (dmg) {
-        fl.style.background = '#FFFFFF';
-        fl.style.boxShadow = '0 0 10px #FFFFFF';
-        fl.style.border = '1px solid #CAD5D9';
+        // Red color for damage in bottom card:
+        fl.style.background = '#E63946';
+        fl.style.boxShadow = '0 0 12px rgba(230, 57, 70, 0.75)';
+        fl.style.border = 'none';
       } else {
         fl.style.background = window.Heart3D.colorFor(a.risk);
         fl.style.boxShadow = 'none';
         fl.style.border = 'none';
       }
+
       rw.querySelector('.val').textContent = pc(a.risk) + '%';
       rw.querySelector('.val').style.color = dmg ? '#B3263E' : '';
-      rw.querySelector('.conf').textContent = dmg ? 'DAMAGED / HIGH RISK' : (lw ? 'Low confidence' : 'Reliable');
+
+      if (dmg) {
+        const colorName = hl ? hl.name : 'White';
+        const colorHex = hl ? hl.hex : '#FFFFFF';
+        rw.querySelector('.conf').innerHTML =
+          '<span class="dmg-pill">DAMAGED</span> <span class="hl-pill" style="--hlc:' + colorHex + '">3D: ' + colorName + '</span>';
+      } else {
+        rw.querySelector('.conf').textContent = (lw ? 'Low confidence' : 'Reliable');
+      }
+
       rw.classList.toggle('is-low', lw && !dmg);
       rw.classList.toggle('is-damaged', dmg);
-      mp[k] = { p: a.risk, low: lw };
     });
-    window.Heart3D.setRisks(mp);
     rd();
   }
 

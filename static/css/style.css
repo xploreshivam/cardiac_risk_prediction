@@ -54,8 +54,11 @@ h1 { margin: 0; font: 600 clamp(1.7rem, 3.2vw, 2.4rem)/1.1 "Newsreader", Georgia
 .conf { grid-column: 2; grid-row: 2; text-align: right; font-size: .75rem; color: var(--muted); }
 .artery-row.is-low .conf { color: #A86500; font-weight: 600; }
 .artery-row.is-low { border-style: dashed; }
-.artery-row.is-damaged { border: 2px solid #B3263E; background: #FFF5F5; }
-.artery-row.is-damaged .conf { color: #B3263E; font-weight: 700; }
+.artery-row.is-damaged { border: 2px solid #B3263E; background: #FFF5F5; box-shadow: 0 2px 8px rgba(179, 38, 62, 0.08); }
+.artery-row.is-damaged:hover { background: #FFEAEA; }
+.artery-row.is-damaged .conf { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.dmg-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; background: #B3263E; color: #FFFFFF; font-weight: 700; font-size: 0.70rem; letter-spacing: 0.3px; line-height: 1.2; }
+.hl-pill { display: inline-block; padding: 2px 6px; border-radius: 4px; background: var(--hlc, #FFFFFF); color: #0E2530; font-weight: 700; font-size: 0.70rem; border: 1px solid rgba(0,0,0,0.18); box-shadow: 0 0 8px var(--hlc, rgba(255,255,255,0.7)); line-height: 1.2; }
 .detail { margin: 12px 0 0; color: var(--muted); font-size: .94rem; }
 
 .form { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 18px 18px; }

@@ -60,7 +60,7 @@ cardiac-3d-risk/
 ├── docs/
 │   ├── PROJECT_BUILD_GUIDE.md Step-by-step roadmap to build this project from scratch
 │   ├── architecture_flow.md  System Architecture & Runtime Flowchart
-│   └── FLOWCHART_GUIDE.md    Mermaid flowchart export guide
+│   
 ├── data/raw/               Z-Alizadeh Sani clinical dataset (.xlsx)
 ├── models/                 Trained ML models (.pkl) + model_metrics.json
 ├── src/
