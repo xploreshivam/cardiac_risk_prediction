@@ -12,7 +12,7 @@ stenosis, plus an overall coronary artery disease (CAD) risk. Built with Flask, 
 3. The API returns four probabilities. The browser maps them onto the 3D heart: green/cyan for normal, and stark white for damaged tissue (>=55%).
 4. Arteries whose model is weak are drawn semi-transparent and labelled **low confidence**.
 
-## Project Development Lifecycle (Scratch to Deployment)
+## Project Development Lifecycle (Scratch to Deployment how we developed)
 
 ```mermaid
 graph TD
