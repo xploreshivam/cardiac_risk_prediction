@@ -24,7 +24,7 @@
       "f1": 0.905,
       "recall": 0.903,
       "precision": 0.907,
-      "confidence": "reliable"
+      "confidence": "moderate"
     },
     "LAD": {
       "positive_rate": 0.584,
@@ -34,7 +34,7 @@
       "f1": 0.806,
       "recall": 0.808,
       "precision": 0.806,
-      "confidence": "reliable"
+      "confidence": "moderate"
     },
     "LCX": {
       "positive_rate": 0.393,

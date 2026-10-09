@@ -1,6 +1,6 @@
-# Cardiac Risk 3D - AI-Powered Coronary Artery Disease & Territory Mapping
+# Cardiac Risk 3D - ML-based Coronary Artery Disease & Territory Mapping
 
-An interactive clinical AI and WebGL platform that predicts stenosis risk across the primary coronary arteries (**LAD**, **LCX**, **RCA**) and overall Coronary Artery Disease (**CAD**), projecting real-time risk scores onto an anatomically partitioned 3D beating heart model with dynamic GPU vertex shading and an accessible clinical readout.
+An interactive clinical ML and WebGL platform that predicts stenosis risk across the primary coronary arteries (**LAD**, **LCX**, **RCA**) and overall Coronary Artery Disease (**CAD**), projecting real-time risk scores onto an anatomically partitioned 3D beating heart model with dynamic GPU vertex shading and an accessible clinical readout.
 
 > **Clinical Disclaimer:** This application is an educational and research prototype trained on 303 patient records from the Z-Alizadeh Sani clinical dataset. It is not an FDA/CE-cleared medical device and should not be used as the sole basis for clinical diagnosis.
 
@@ -16,19 +16,20 @@ An interactive clinical AI and WebGL platform that predicts stenosis risk across
     4. Right Coronary Artery (`RCA`) Stenosis
   - 5-Fold Stratified Cross-Validation with balanced class weights.
 - **Real-Time 3D WebGL Heart Rendering (Three.js):**
-  - Continuous 60 FPS skeletal cardiac cycle deformation (`beating-heart.glb`).
+  - Skeletal cardiac cycle deformation (`beating-heart.glb`) via WebGL rendering.
   - Studio lighting, responsive camera orbit controls, and camera-facing anatomical billboard tags.
   - Interactive anatomical raycasting to inspect local myocardial territories and vessel supply zones.
 - **Dual Visual Diagnostic Feedback System:**
   - **3D Heart GPU Shading (Direct `BufferAttribute` Overdrive):**
-    - **Single Damaged Artery ($\ge 55\%$):** Stark Glowing White (`#FFFFFF`, HDR multiplier `6.5`).
-    - **Multiple Damaged Arteries ($\ge 55\%$):** High-contrast multi-color palette:
+    - **Single High Predicted Risk Artery ($\ge 55\%$):** Stark Glowing White (`#FFFFFF`, HDR multiplier `6.5`).
+    - **Multiple High Predicted Risk Arteries ($\ge 55\%$):** High-contrast multi-color palette:
       - **LAD Territory:** Stark White (`#FFFFFF`)
       - **LCX Territory:** Electric Cyan (`#00E5FF`)
       - **RCA Territory:** Vivid Amber/Gold (`#FFB800`)
     - **Normal / Baseline Territory ($< 55\%$):** Clinical soft teal/green gradient.
+    - *(Note on cutoff & calibration: The $\ge 55\%$ threshold is an illustrative heuristic cutoff rather than a definitive clinical diagnostic threshold; model probabilities are uncalibrated and intended for relative risk stratification.)*
   - **Clinical Readout Panel:**
-    - High-contrast alert progress bars with bold **Medical Red (`#E63946`)** fill for stenosed arteries.
+    - High-contrast alert progress bars with bold **Medical Red (`#E63946`)** fill for high predicted risk arteries.
     - Matching 3D color pill tags (`3D: White`, `3D: Cyan`, `3D: Gold`) for instantaneous cross-referencing.
     - Full WCAG 2.1 AA compliant contrast ratios and ARIA accessibility (`role="progressbar"`, `aria-valuenow`, `aria-live="polite"`).
 - **Defensive Production Gateway (Flask REST API):**
@@ -94,6 +95,32 @@ graph TD
     end
 ```
 
+### Phase 3 Deep-Dive: How 20,139 Vertices Were Assigned to LAD / LCX / RCA Territories
+
+A common question in cardiac 3D mesh modeling is how individual vertices are linked to coronary blood supply. Here is the exact methodology:
+
+- **Assignment Method:** Programmatic spatial / geometric position rule script.
+  - The vertices were **not** hand-painted manually vertex-by-vertex, nor extracted from patient-specific voxel CT/MRI segmentation.
+  - Instead, an automated geometry script evaluated the local 3D Cartesian coordinates $(x, y, z)$ and surface normal vectors of the heart mesh (`beating-heart.glb`) against spatial bounding rules aligned with anatomical coronary landmarks:
+    1. **LAD Territory (Anterior Interventricular Sulcus & Apex):**
+       - Evaluated anterior surface coordinates and apical tip.
+       - **Tag 1 (LAD Artery Trace):** 563 vertices.
+       - **Tag 4 (LAD Supplied Myocardium):** 1,006 vertices.
+    2. **LCX Territory (Left Lateral & Posterior Free Wall):**
+       - Evaluated left atrioventricular groove and posterolateral coordinates.
+       - **Tag 2 (LCX Artery Trace):** 1,020 vertices.
+       - **Tag 5 (LCX Supplied Myocardium):** 3,124 vertices.
+    3. **RCA Territory (Right Ventricle & Inferior / Diaphragmatic Wall):**
+       - Evaluated right coronary sulcus and inferior diaphragmatic surface coordinates.
+       - **Tag 3 (RCA Artery Trace):** 577 vertices.
+       - **Tag 6 (RCA Supplied Myocardium):** 2,871 vertices.
+    4. **Normal / Baseline Myocardium & Great Vessels:**
+       - Basal structures, valves, aorta/pulmonary trunks, and non-coronary segments defaulted to **Tag 0** (10,978 vertices).
+- **Resulting Mapping Table:**
+  All 20,139 vertex integer tags were exported to `static/data/vertex_anatomy_tags.json`, which Three.js streams into a `THREE.BufferAttribute` color array for real-time vertex shader coloring.
+- **Academic Disclaimer:**
+  This spatial partitioning is an **illustrative mapping inspired by the AHA 17-segment model** designed for interactive WebGL visualization, rather than a clinically validated patient segmentation.
+
 ---
 
 ## Project Structure
@@ -145,7 +172,7 @@ cardiac-3d-risk/
 ```bash
 # Clone the repository
 git clone https://github.com/xploreshivam/cardiac_risk_prediction.git
-cd cardiac-3d-risk
+cd cardiac_risk_prediction
 
 # Create virtual environment
 python -m venv .venv
@@ -217,12 +244,14 @@ Models were validated using 5-fold stratified cross-validation on the Z-Alizadeh
 
 | Target | Accuracy | Guessing Baseline | ROC-AUC | Sensitivity (Recall) | Clinical Confidence |
 |---|---|---|---|---|---|
-| **Overall CAD** | **86.5%** | 71.3% | **0.93** | 91.2% | High / Reliable |
-| **LAD Artery** | **77.2%** | 58.4% | **0.84** | 79.5% | High / Reliable |
+| **Overall CAD** | **86.5%** | 71.3% | **0.93** | 91.2% | Moderate |
+| **LAD Artery** | **77.2%** | 58.4% | **0.84** | 79.5% | Moderate |
 | **LCX Artery** | **63.7%** | 60.7% | **0.73** | 54.8% | Low / Guarded |
 | **RCA Artery** | **65.7%** | 62.4% | **0.71** | 57.1% | Low / Guarded |
 
-*Note: LCX and RCA stenosis prediction from standard non-invasive features presents known clinical difficulty due to posterior circulation subtlety; the interface transparently flags these territories with **Low Confidence** notices to prevent over-reliance.*
+- **Why Clinical Confidence is Rated as Moderate (not High/Reliable):**
+  The model is trained on a single-center cohort of 303 patients from Tehran Heart Center (Z-Alizadeh Sani dataset) with no external multi-center cohort validation. Even though 5-fold cross-validation demonstrated solid internal discriminative performance (ROC-AUC 0.93 on CAD and 0.84 on LAD), true real-world generalizability across diverse clinical settings cannot be asserted without multi-center external validation. Hence, confidence is designated as **Moderate** rather than High/Reliable.
+- *Posterior circulation note:* LCX and RCA stenosis prediction from standard non-invasive features presents known clinical difficulty due to posterior circulation subtlety; the interface transparently flags these territories with **Low Confidence** notices to prevent over-reliance.
 
 ---
 
@@ -243,5 +272,6 @@ On Render:
 ## Dataset Attribution & References
 
 - **Dataset:** Alizadehsani, R., Roshanzamir, M., Sani, Z. *Extension of Z-Alizadeh Sani dataset*. UCI Machine Learning Repository. [https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset](https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset) (Licensed under CC BY 4.0).
-- **3D Heart Model:** [“Beating Heart”](https://skfb.ly/owVVo) by Dreamwasabducted, licensed under [Creative Commons Attribution (CC BY 4.0)](http://creativecommons.org/licenses/by/4.0/).
-- **Anatomical Corroboration:** Coronary artery myocardial territories verified against standard American Heart Association (AHA) 17-segment mapping guidelines.
+- **3D Heart Model:** [“Beating Heart” by Dreamwasabducted on Sketchfab](https://sketchfab.com/3d-models/beating-heart-0fbaea9e0ad74fa78ba772e04313f890) (shortlink: [https://skfb.ly/owVVo](https://skfb.ly/owVVo)), licensed under [Creative Commons Attribution (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
+- **3D Model Modifications (CC-BY Notice):** The original 3D asset was modified for this project: mesh vertices were partitioned into anatomical coronary supply territories (`vertex_anatomy_tags.json`), dynamic GPU vertex color buffer attributes (`BufferAttribute`) were added for real-time risk coloring, and skeletal cycle animation playback was retuned for WebGL.
+- **Anatomical Mapping:** AHA 17-segment se inspired, illustrative mapping (heuristic 3D spatial partitioning based on coordinate bounding rules, not a clinically verified patient-specific segmentation).

@@ -101,7 +101,7 @@
       }
 
       if (dmg) {
-        // Red color for damage in bottom card:
+        // Red color for high predicted risk in bottom card:
         fl.style.background = '#E63946';
         fl.style.boxShadow = '0 0 12px rgba(230, 57, 70, 0.75)';
         fl.style.border = 'none';
@@ -118,9 +118,9 @@
         const colorName = hl ? hl.name : 'White';
         const colorHex = hl ? hl.hex : '#FFFFFF';
         rw.querySelector('.conf').innerHTML =
-          '<span class="dmg-pill">DAMAGED</span> <span class="hl-pill" style="--hlc:' + colorHex + '">3D: ' + colorName + '</span>';
+          '<span class="dmg-pill">HIGH RISK</span> <span class="hl-pill" style="--hlc:' + colorHex + '">3D: ' + colorName + '</span>';
       } else {
-        rw.querySelector('.conf').textContent = (lw ? 'Low confidence' : 'Reliable');
+        rw.querySelector('.conf').textContent = (lw ? 'Low confidence' : 'Moderate');
       }
 
       rw.classList.toggle('is-low', lw && !dmg);
@@ -132,7 +132,7 @@
   // details
   function rd() {
     if (!s) {
-      d.innerHTML = '<span class="detail-hint">Select an artery on the heart, or from the list above, to read what it supplies and its validation reliability.</span>';
+      d.innerHTML = '<span class="detail-hint">Select an artery on the heart, or from the list above, to read what it supplies and its validation metrics.</span>';
       return;
     }
     let html = '<div class="detail-header"><strong class="detail-name">' + m[s][0] + ' (' + s + ')</strong>: ' + m[s][1] + '</div>';
@@ -140,14 +140,14 @@
       const at = rs.arteries[s];
       const isDmg = at.risk >= 0.55;
       html += '<div class="detail-badges">' +
-        '<span class="detail-badge ' + (isDmg ? 'badge-danger' : 'badge-safe') + '">Stenosis: ' + pc(at.risk) + '% (' + at.level + ')</span>' +
+        '<span class="detail-badge ' + (isDmg ? 'badge-danger' : 'badge-safe') + '">Predicted Risk: ' + pc(at.risk) + '% (' + at.level + ')</span>' +
         '<span class="detail-metric">Accuracy: <strong>' + pc(at.accuracy) + '%</strong></span>' +
         '<span class="detail-metric">ROC-AUC: <strong>' + at.auc.toFixed(2) + '</strong></span>' +
       '</div>';
       if (at.confidence === 'low') {
         html += '<div class="detail-callout callout-low"><strong>Low Confidence Notice:</strong> High class imbalance in clinical records brings validation metrics close to baseline. Illustrated with dashed border for academic honesty.</div>';
       } else {
-        html += '<div class="detail-callout callout-good"><strong>Reliable Model:</strong> High cross-validated accuracy and discriminative power for this coronary territory.</div>';
+        html += '<div class="detail-callout callout-good"><strong>Moderate Confidence:</strong> Evaluated via cross-validation on a single-center cohort (N=303); lacks external multi-center validation.</div>';
       }
     }
     d.innerHTML = html;

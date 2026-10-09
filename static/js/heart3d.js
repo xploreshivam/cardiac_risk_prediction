@@ -160,10 +160,10 @@
     const p1 = r.LAD ? r.LAD.p : 0, p2 = r.LCX ? r.LCX.p : 0, p3 = r.RCA ? r.RCA.p : 0;
     const d1 = p1 >= 0.55, d2 = p2 >= 0.55, d3 = p3 >= 0.55;
 
-    const damagedList = [];
-    if (d1) damagedList.push('LAD');
-    if (d2) damagedList.push('LCX');
-    if (d3) damagedList.push('RCA');
+    const highRiskList = [];
+    if (d1) highRiskList.push('LAD');
+    if (d2) highRiskList.push('LCX');
+    if (d3) highRiskList.push('RCA');
 
     // Distinct palettes:
     // Pure White uses HDR overdrive (5.0, 5.0, 5.0) which forces all red/blue pixels to pure 100% white!
@@ -187,11 +187,11 @@
     };
 
     const highlightConfig = {};
-    if (damagedList.length === 1) {
-      // Single damaged area -> pure white highlight
-      highlightConfig[damagedList[0]] = COLOR_WHITE;
-    } else if (damagedList.length >= 2) {
-      // Multiple damaged areas -> each gets a distinct color
+    if (highRiskList.length === 1) {
+      // Single high-risk territory -> pure white highlight
+      highlightConfig[highRiskList[0]] = COLOR_WHITE;
+    } else if (highRiskList.length >= 2) {
+      // Multiple high-risk territories -> each gets a distinct color
       if (d1) highlightConfig['LAD'] = COLOR_WHITE;
       if (d2) highlightConfig['LCX'] = (d1 ? COLOR_CYAN : COLOR_WHITE);
       if (d3) highlightConfig['RCA'] = (d1 && d2 ? COLOR_GOLD : (d1 || d2 ? COLOR_CYAN : COLOR_WHITE));
@@ -243,7 +243,7 @@
         it.tag.classList.toggle('is-selected', is);
         it.tag.classList.toggle('is-damaged', Boolean(dg));
         if (dg) {
-          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% [DAMAGED - ' + dg.name.toUpperCase() + ']';
+          it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% [HIGH RISK - ' + dg.name.toUpperCase() + ']';
           it.tag.style.setProperty('--c', dg.hex);
           it.tag.style.background = dg.hex;
           it.tag.style.color = '#0E2530';

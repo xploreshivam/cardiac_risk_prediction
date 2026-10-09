@@ -70,10 +70,11 @@ graph TD
 
 ### Phase 3: 3D Asset & Vertex Mapping
 1. **GLB Model**: Place the animated cardiac model in `static/models/beating-heart.glb`.
-2. **Anatomical Partitioning**: Map each vertex in the mesh to vascular coronary supply zones:
-   - `LAD territory`: Anterior wall and apex.
-   - `LCX territory`: Lateral and posterior left wall.
-   - `RCA territory`: Inferior wall and right ventricle.
+2. **Anatomical Partitioning**: Map each vertex in the mesh to vascular coronary supply zones via automated 3D geometric coordinate bounding rules (AHA 17-segment inspired illustrative mapping):
+   - `LAD territory`: Anterior wall and apex (Tag 1 for artery trace, Tag 4 for supplied myocardium).
+   - `LCX territory`: Lateral and posterior left wall (Tag 2 for artery trace, Tag 5 for supplied myocardium).
+   - `RCA territory`: Inferior wall and right ventricle (Tag 3 for artery trace, Tag 6 for supplied myocardium).
+   - Baseline structures: Default Tag 0.
 3. **Mapping Asset**: Save 20,139 integer vertex tags to `static/data/vertex_anatomy_tags.json`.
 
 ### Phase 4: Backend API & Defensive Validation (`app.py`, `src/predict.py`)
@@ -87,10 +88,10 @@ graph TD
    - Initialize Perspective Camera, Studio Directional Lights, and WebGLRenderer.
    - Load `beating-heart.glb` and activate beating animation via `THREE.AnimationMixer`.
    - Bind `THREE.BufferAttribute(colors, 3)` with `material.vertexColors = true`.
-2. **Damage Shading & Multi-Area Highlights**:
-   - Single artery damaged: Highlights territory in **Stark White (`#FFFFFF`, HDR overdrive multiplier 6.5)**.
-   - Multiple arteries damaged: Highlights each territory in a distinct contrast color (**LAD: White, LCX: Electric Cyan, RCA: Vivid Gold**).
-   - Clinical Readout Card: Highlights damaged stenosis risk in bold **Medical Red (`#E63946`)** with ARIA progressbars.
+2. **High Predicted Risk Shading & Multi-Area Highlights**:
+   - Single artery high predicted risk ($\ge 55\%$): Highlights territory in **Stark White (`#FFFFFF`, HDR overdrive multiplier 6.5)**.
+   - Multiple arteries high predicted risk ($\ge 55\%$): Highlights each territory in a distinct contrast color (**LAD: White, LCX: Electric Cyan, RCA: Vivid Gold**).
+   - Clinical Readout Card: Highlights high predicted risk in bold **Medical Red (`#E63946`)** with ARIA progressbars.
    - Healthy/mild: Retains natural anatomical gradient (Green/Cyan).
 
 ### Phase 6: Testing & Deployment

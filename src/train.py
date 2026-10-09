@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from src.config import MODELS_DIR, METRICS_PATH, TARGETS, FEATURE_COLUMNS
 from src.data import load_dataset
 
-RELIABLE_AUC = 0.80  # below this the UI marks the artery as "low confidence"
+MODERATE_AUC = 0.80  # below this the UI marks the artery as "low confidence"
 
 
 def build_pipeline() -> Pipeline:
@@ -50,7 +50,7 @@ def train() -> dict:
             "f1": round(float(scores["test_f1"].mean()), 3),
             "recall": round(float(scores["test_recall"].mean()), 3),
             "precision": round(float(scores["test_precision"].mean()), 3),
-            "confidence": "reliable" if auc >= RELIABLE_AUC else "low",
+            "confidence": "moderate" if auc >= MODERATE_AUC else "low",
         }
         model = build_pipeline().fit(X, y)
         joblib.dump(model, MODELS_DIR / f"{key.lower()}_model.pkl")

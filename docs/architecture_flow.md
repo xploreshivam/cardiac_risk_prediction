@@ -12,9 +12,9 @@ graph TD
         A["Patient Clinical Form<br/>(12 Variables: Demographics, ECG, Echo EF)"] -->|Input / Change Event| B["Client Payload Generator & Debounce"]
         B -->|JSON Request| C["HTTP POST /api/predict"]
         
-        M["Three.js 3D WebGL Canvas<br/>(OrbitControls & 60fps AnimationMixer)"] --> N["Raycaster & Camera-Facing<br/>Billboard Anatomy Labels"]
+        M["Three.js 3D WebGL Canvas<br/>(OrbitControls & AnimationMixer)"] --> N["Raycaster & Camera-Facing<br/>Billboard Anatomy Labels"]
         O["Accessible Clinical Readout Panel<br/>(ARIA Progressbars & WCAG Contrast)"]
-        O2["Damage Status Badges<br/>(Bold Medical Red #E63946 Alert)"]
+        O2["High Risk Status Badges<br/>(Bold Medical Red #E63946 Alert)"]
     end
 
     subgraph API ["2. Flask REST Backend & Validation Gateway"]
@@ -49,11 +49,11 @@ graph TD
         O --> O2
         
         I -->|Update 3D Heart| J["Territory Risk & Color Dispatcher"]
-        J --> K{"Stenosis Severity Check<br/>(Threshold >= 55%)"}
+        J --> K{"Risk Threshold Check<br/>(Illustrative Cutoff >= 55%)"}
         
-        K -->|0 Damaged Territories| L0["Normal / Baseline Gradient<br/>(Clinical Soft Cyan/Green)"]
-        K -->|1 Damaged Territory| L1["Single Damage Mode<br/>Stark Glowing White #FFFFFF"]
-        K -->|2+ Damaged Territories| L2["Multi-Damage Palette Mode<br/>LAD: White | LCX: Cyan | RCA: Gold"]
+        K -->|0 High Risk Territories| L0["Normal / Baseline Gradient<br/>(Clinical Soft Cyan/Green)"]
+        K -->|1 High Risk Territory| L1["Single High-Risk Mode<br/>Stark Glowing White #FFFFFF"]
+        K -->|2+ High Risk Territories| L2["Multi-Territory Palette Mode<br/>LAD: White | LCX: Cyan | RCA: Gold"]
         
         L0 --> P["Direct GPU BufferAttribute Color Overdrive<br/>(HDR Float32Array on 20,139 Vertices)"]
         L1 --> P
@@ -72,7 +72,7 @@ graph TD
 - **Clinical Parameter Form**: Captures 12 patient variables (demographics, symptoms, ECG findings, and echocardiography metrics) with synchronized input/change listeners.
 - **Interactive 3D Stage**: WebGL-powered 3D stage featuring a realistic beating heart model (`beating-heart.glb`) with full orbit controls and continuous skeletal animations.
 - **Raycasting & Billboard Labels**: Allows clicking on myocardial walls and coronary vessels to inspect local risk scores and supply regions with depth-tested camera-facing labels.
-- **Accessible Clinical Readout Panel**: Displays numerical stenosis percentages, WCAG 4.5:1 compliant contrast cards, accessible ARIA progressbars (`aria-valuenow`, `aria-live="polite"`), and bold medical red (`#E63946`) damage warning bars.
+- **Accessible Clinical Readout Panel**: Displays numerical stenosis percentages, WCAG 4.5:1 compliant contrast cards, accessible ARIA progressbars (`aria-valuenow`, `aria-live="polite"`), and bold medical red (`#E63946`) high predicted risk alert bars.
 
 ### 2. Backend Engine & Defensive Gateway (Flask API)
 - **Defensive Multi-Tier Validation**:
@@ -98,4 +98,4 @@ graph TD
     - **LCX**: Electric Cyan (`#00E5FF`)
     - **RCA**: Vivid Amber/Gold (`#FFB800`)
   - **Normal / Low Risk**: Clinical soft baseline gradient (`#1DD1A1` to `#00E5FF`).
-- **UI Readout Synchronization**: Damaged territories are flagged with bold Medical Red (`#E63946`) status bars alongside 3D color pill tags for instant cross-referencing.
+- **UI Readout Synchronization**: High predicted risk territories are flagged with bold Medical Red (`#E63946`) status bars alongside 3D color pill tags for instant cross-referencing.
