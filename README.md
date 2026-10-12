@@ -15,6 +15,12 @@ An interactive clinical ML and WebGL platform that predicts stenosis risk across
     3. Left Circumflex Artery (`LCX`) Stenosis
     4. Right Coronary Artery (`RCA`) Stenosis
   - 5-Fold Stratified Cross-Validation with balanced class weights.
+  - **Zero Target Leakage Architecture:** Angiography targets (`Cath`, `LAD`, `LCX`, `RCA`) are strictly segregated from inputs; models rely solely on non-invasive demographic, symptom, ECG, and echocardiographic variables.
+  - **Domain Conformance on RWMA:** Regional Wall Motion Abnormality (`Region RWMA`) is treated as a clinical echocardiographic finding rather than direct 3D vertex coordinates.
+- **Explainable AI (SHAP TreeExplainer):**
+  - Instantaneous patient-specific SHAP attribution computed on scaler-transformed inputs for all 4 targets simultaneously.
+  - Bi-directional divergent bar charts (Red for risk-raising factors, Blue for risk-lowering factors) paired with human-readable physiological values (e.g., `BP 138 mmHg`).
+  - Transparent clinical attribution disclaimer clarifying that feature attributions reflect statistical model behavior rather than medical causality.
 - **Real-Time 3D WebGL Heart Rendering (Three.js):**
   - Skeletal cardiac cycle deformation (`beating-heart.glb`) via WebGL rendering.
   - Studio lighting, responsive camera orbit controls, and camera-facing anatomical billboard tags.
@@ -34,8 +40,6 @@ An interactive clinical ML and WebGL platform that predicts stenosis risk across
     - Full WCAG 2.1 AA compliant contrast ratios and ARIA accessibility (`role="progressbar"`, `aria-valuenow`, `aria-live="polite"`).
 - **Defensive Production Gateway (Flask REST API):**
   - Strict payload validation rejecting malformed bodies (`400 Bad Request`), unsupported content types (`415 Unsupported Media Type`), invalid HTTP methods (`405 Method Not Allowed`), and out-of-range / non-finite inputs like `NaN` and `Infinity` (`422 Unprocessable Entity`).
-
----
 
 ---
 
@@ -62,7 +66,7 @@ graph TD
     subgraph P2 ["Phase 2: ML Pipeline & Stratified Validation"]
         A3 --> B1["Pipeline Design<br/>(StandardScaler + Balanced Random Forest)"]
         B1 --> B2["5-Fold Stratified Cross-Validation<br/>(Accuracy, ROC-AUC, Recall Optimization)"]
-        B2 --> B3["Model Serialization<br/>(Export .pkl Models & metrics.json)"]
+        B2 --> B3["Model Serialization<br/>(Export .pkl Models & model_metrics.json)"]
     end
 
     %% PHASE 3: 3D ASSETS
@@ -242,12 +246,12 @@ Open your browser and navigate to:
 
 Models were validated using 5-fold stratified cross-validation on the Z-Alizadeh Sani cohort ($N = 303$):
 
-| Target | Accuracy | Guessing Baseline | ROC-AUC | Sensitivity (Recall) | Clinical Confidence |
-|---|---|---|---|---|---|
-| **Overall CAD** | **86.5%** | 71.3% | **0.93** | 91.2% | Moderate |
-| **LAD Artery** | **77.2%** | 58.4% | **0.84** | 79.5% | Moderate |
-| **LCX Artery** | **63.7%** | 60.7% | **0.73** | 54.8% | Low / Guarded |
-| **RCA Artery** | **65.7%** | 62.4% | **0.71** | 57.1% | Low / Guarded |
+| Target | Accuracy | Guessing Baseline | ROC-AUC | Sensitivity (Recall) | Precision | F1-Score | Clinical Confidence |
+|---|---|---|---|---|---|---|---|
+| **Overall CAD** | **86.5%** | 71.3% | **0.93** | 90.3% | 90.7% | **90.5%** | Moderate |
+| **LAD Artery** | **77.2%** | 58.4% | **0.84** | 80.8% | 80.6% | **80.6%** | Moderate |
+| **LCX Artery** | **63.7%** | 60.7% | **0.73** | 58.8% | 54.7% | **56.5%** | Low / Guarded |
+| **RCA Artery** | **65.7%** | 62.4% | **0.71** | 57.9% | 55.3% | **56.2%** | Low / Guarded |
 
 - **Why Clinical Confidence is Rated as Moderate (not High/Reliable):**
   The model is trained on a single-center cohort of 303 patients from Tehran Heart Center (Z-Alizadeh Sani dataset) with no external multi-center cohort validation. Even though 5-fold cross-validation demonstrated solid internal discriminative performance (ROC-AUC 0.93 on CAD and 0.84 on LAD), true real-world generalizability across diverse clinical settings cannot be asserted without multi-center external validation. Hence, confidence is designated as **Moderate** rather than High/Reliable.
@@ -274,4 +278,4 @@ On Render:
 - **Dataset:** Alizadehsani, R., Roshanzamir, M., Sani, Z. *Extension of Z-Alizadeh Sani dataset*. UCI Machine Learning Repository. [https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset](https://archive.ics.uci.edu/dataset/411/extention+of+z+alizadeh+sani+dataset) (Licensed under CC BY 4.0).
 - **3D Heart Model:** [“Beating Heart” by Dreamwasabducted on Sketchfab](https://sketchfab.com/3d-models/beating-heart-0fbaea9e0ad74fa78ba772e04313f890) (shortlink: [https://skfb.ly/owVVo](https://skfb.ly/owVVo)), licensed under [Creative Commons Attribution (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/).
 - **3D Model Modifications (CC-BY Notice):** The original 3D asset was modified for this project: mesh vertices were partitioned into anatomical coronary supply territories (`vertex_anatomy_tags.json`), dynamic GPU vertex color buffer attributes (`BufferAttribute`) were added for real-time risk coloring, and skeletal cycle animation playback was retuned for WebGL.
-- **Anatomical Mapping:** AHA 17-segment se inspired, illustrative mapping (heuristic 3D spatial partitioning based on coordinate bounding rules, not a clinically verified patient-specific segmentation).
+- **Anatomical Mapping:** AHA 17-segment inspired, illustrative mapping (heuristic 3D spatial partitioning based on coordinate bounding rules, not a clinically verified patient-specific segmentation).

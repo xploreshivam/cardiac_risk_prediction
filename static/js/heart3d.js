@@ -319,7 +319,11 @@
   cv.addEventListener('pointerup', (e) => {
     if (dn && !dn.m) {
       const k = ht(e);
-      if (k) ap.select(k);
+      if (k) {
+        ap.select(k === sl ? null : k);
+      } else {
+        ap.select(null);
+      }
     }
     dn = null;
   });
@@ -338,6 +342,7 @@
     gp.rotation.set(0, 0, 0);
     cm.position.z = 22;
     inx = false;
+    ap.select(null);
   });
 
   // resize
