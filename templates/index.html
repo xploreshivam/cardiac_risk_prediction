@@ -14,6 +14,10 @@
   <header>
     <h1>Cardiac risk map</h1>
     <p class="lede">Enter clinical patient metrics to visualize coronary stenosis probability and projected high-risk territories on the interactive 3D heart.</p>
+    <div class="clinical-disclaimer-banner" role="note" aria-label="Clinical Safety Disclaimer">
+      <span class="disclaimer-badge">Clinical Disclaimer</span>
+      <span>This application is an educational &amp; decision-support prototype. Predictions are not a substitute for formal diagnostic imaging (coronary angiography, CT/MRI) or professional clinical evaluation.</span>
+    </div>
   </header>
 
   <div class="layout">
@@ -45,6 +49,23 @@
           {% endfor %}
         </ul>
         <div id="artery-detail" class="detail" aria-live="polite">Select an artery on the heart, or from this list, to read what it supplies and its validation metrics.</div>
+        
+        <div id="shap-section" class="shap-section" aria-live="polite">
+          <div class="shap-header">
+            <div class="shap-title-wrap">
+              <span class="shap-title">Feature Contributions (SHAP)</span>
+              <span id="shap-target-badge" class="shap-target-badge">Overall CAD</span>
+            </div>
+            <div class="shap-legend">
+              <span class="legend-item"><span class="legend-dot dot-blue"></span>Lowers risk</span>
+              <span class="legend-item"><span class="legend-dot dot-red"></span>Raises risk</span>
+            </div>
+          </div>
+          <div id="shap-list" class="shap-list">
+            <div class="shap-placeholder">Calculate risk to see feature-level model explanations.</div>
+          </div>
+          <p class="shap-disclaimer">This explanation reflects model feature attribution behavior, not direct clinical causality.</p>
+        </div>
       </section>
     </div>
 
@@ -73,10 +94,28 @@
       <details class="model-info">
         <summary>How reliable is this model? (Moderate confidence)</summary>
         <table>
-          <thead><tr><th>Target</th><th>Accuracy</th><th>Guessing baseline</th><th>ROC-AUC</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Target</th>
+              <th>Accuracy</th>
+              <th>Baseline</th>
+              <th>ROC-AUC</th>
+              <th>Sensitivity</th>
+              <th>Precision</th>
+              <th>F1</th>
+            </tr>
+          </thead>
           <tbody>
             {% for key, m in metrics.targets.items() %}
-            <tr><td>{{ 'Overall CAD' if key == 'CAD' else key }}</td><td>{{ '%.1f' % (m.accuracy * 100) }}%</td><td>{{ '%.1f' % (m.baseline_accuracy * 100) }}%</td><td>{{ '%.2f' % m.roc_auc }}</td></tr>
+            <tr>
+              <td><strong>{{ 'Overall CAD' if key == 'CAD' else key }}</strong></td>
+              <td>{{ '%.1f' % (m.accuracy * 100) }}%</td>
+              <td>{{ '%.1f' % (m.baseline_accuracy * 100) }}%</td>
+              <td>{{ '%.2f' % m.roc_auc }}</td>
+              <td>{{ '%.1f' % (m.recall * 100) }}%</td>
+              <td>{{ '%.1f' % (m.precision * 100) }}%</td>
+              <td>{{ '%.1f' % (m.f1 * 100) }}%</td>
+            </tr>
             {% endfor %}
           </tbody>
         </table>

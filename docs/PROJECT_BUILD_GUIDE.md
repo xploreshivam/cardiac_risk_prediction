@@ -16,7 +16,7 @@ graph TD
     subgraph P2 ["Phase 2: ML Pipeline & Stratified Validation"]
         A3 --> B1["Pipeline Design<br/>(StandardScaler + Balanced Random Forest)"]
         B1 --> B2["5-Fold Stratified Cross-Validation<br/>(Accuracy, ROC-AUC, Recall Optimization)"]
-        B2 --> B3["Model Serialization<br/>(Export .pkl Models & metrics.json)"]
+        B2 --> B3["Model Serialization<br/>(Export .pkl Models & model_metrics.json)"]
     end
 
     %% PHASE 3: 3D ASSETS
@@ -66,7 +66,7 @@ graph TD
 ### Phase 2: ML Model Training (`src/train.py`)
 1. **Model Architecture**: Use `RandomForestClassifier(class_weight='balanced')` inside a `Pipeline([('scaler', StandardScaler()), ('clf', ...)])`.
 2. **Cross-Validation**: Run 5-fold stratified cross-validation to assess true generalization.
-3. **Artifact Generation**: Save trained models to `models/` as `cad_model.pkl`, `lad_model.pkl`, `lcx_model.pkl`, `rca_model.pkl`, along with validation stats in `metrics.json`.
+3. **Artifact Generation**: Save trained models to `models/` as `cad_model.pkl`, `lad_model.pkl`, `lcx_model.pkl`, `rca_model.pkl`, along with validation stats in `model_metrics.json`.
 
 ### Phase 3: 3D Asset & Vertex Mapping
 1. **GLB Model**: Place the animated cardiac model in `static/models/beating-heart.glb`.

@@ -133,6 +133,7 @@
   function rd() {
     if (!s) {
       d.innerHTML = '<span class="detail-hint">Select an artery on the heart, or from the list above, to read what it supplies and its validation metrics.</span>';
+      renderShap();
       return;
     }
     let html = '<div class="detail-header"><strong class="detail-name">' + m[s][0] + ' (' + s + ')</strong>: ' + m[s][1] + '</div>';
@@ -143,6 +144,8 @@
         '<span class="detail-badge ' + (isDmg ? 'badge-danger' : 'badge-safe') + '">Predicted Risk: ' + pc(at.risk) + '% (' + at.level + ')</span>' +
         '<span class="detail-metric">Accuracy: <strong>' + pc(at.accuracy) + '%</strong></span>' +
         '<span class="detail-metric">ROC-AUC: <strong>' + at.auc.toFixed(2) + '</strong></span>' +
+        (at.recall ? '<span class="detail-metric">Sensitivity: <strong>' + pc(at.recall) + '%</strong></span>' : '') +
+        (at.f1 ? '<span class="detail-metric">F1: <strong>' + pc(at.f1) + '%</strong></span>' : '') +
       '</div>';
       if (at.confidence === 'low') {
         html += '<div class="detail-callout callout-low"><strong>Low Confidence Notice:</strong> High class imbalance in clinical records brings validation metrics close to baseline. Illustrated with dashed border for academic honesty.</div>';
@@ -151,6 +154,61 @@
       }
     }
     d.innerHTML = html;
+    renderShap();
+  }
+
+  // SHAP feature breakdown renderer
+  function renderShap() {
+    const listEl = $('shap-list');
+    const badgeEl = $('shap-target-badge');
+    if (!listEl || !rs || !rs.explanations) return;
+
+    const targetKey = s || 'CAD';
+    const explanation = rs.explanations[targetKey];
+    if (!explanation || !explanation.features) return;
+
+    const targetNames = {
+      CAD: 'Overall CAD',
+      LAD: 'LAD Artery',
+      LCX: 'LCX Artery',
+      RCA: 'RCA Artery'
+    };
+    if (badgeEl) {
+      badgeEl.textContent = targetNames[targetKey] || targetKey;
+    }
+
+    const maxAbs = Math.max(...explanation.features.map((item) => Math.abs(item.shap_value)), 0.04);
+
+    let html = '';
+    explanation.features.forEach((item) => {
+      const sv = item.shap_value;
+      const isPos = sv > 0;
+      const isNeg = sv < 0;
+      const pct = Math.min(Math.round((Math.abs(sv) / maxAbs) * 100), 100);
+      const sign = isPos ? '+' : (isNeg ? '-' : '');
+      const formattedVal = sign + Math.abs(sv).toFixed(3);
+
+      html += '<div class="shap-row">' +
+        '<div class="shap-info">' +
+          '<span class="shap-fname" title="' + item.label + '">' + item.label + '</span>' +
+          '<span class="shap-fval">' + item.patient_value + '</span>' +
+        '</div>' +
+        '<div class="shap-bar-zone">' +
+          '<div class="shap-divergent-track">' +
+            '<div class="shap-track-neg">' +
+              (isNeg ? '<span class="shap-bar bar-neg" style="width:' + pct + '%;"></span>' : '') +
+            '</div>' +
+            '<div class="shap-axis"></div>' +
+            '<div class="shap-track-pos">' +
+              (isPos ? '<span class="shap-bar bar-pos" style="width:' + pct + '%;"></span>' : '') +
+            '</div>' +
+          '</div>' +
+          '<span class="shap-num ' + (isPos ? 'num-pos' : (isNeg ? 'num-neg' : 'num-zero')) + '">' + formattedVal + '</span>' +
+        '</div>' +
+      '</div>';
+    });
+
+    listEl.innerHTML = html;
   }
 
   // selection coordinator
@@ -187,4 +245,7 @@
   }
   f.addEventListener('input', triggerAutoSync);
   f.addEventListener('change', triggerAutoSync);
+
+  // Initialize predictions and 3D visualization immediately on load
+  pd();
 })();
