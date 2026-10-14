@@ -6,10 +6,11 @@
 body { margin: 0; background: var(--paper); color: var(--ink);
   font: 16px/1.5 "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
-h1 { margin: 0; font: 600 clamp(1.7rem, 3.2vw, 2.4rem)/1.1 "Newsreader", Georgia, serif; }
-.lede { margin: 8px 0 0; max-width: 62ch; color: var(--muted); }
-.clinical-disclaimer-banner { margin-top: 14px; padding: 8px 14px; background: #FFF9ED; border: 1px solid #F3DFBA; border-left: 4px solid var(--amber); border-radius: 8px; font-size: 0.82rem; color: #6B4900; display: flex; align-items: center; gap: 10px; line-height: 1.45; }
-.disclaimer-badge { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.5px; padding: 2px 6px; background: #D9A23A; color: #FFFFFF; border-radius: 4px; white-space: nowrap; }
+header { text-align: center; margin: 0 auto 6px; }
+h1 { margin: 0 auto; font: 600 clamp(1.8rem, 3.4vw, 2.5rem)/1.15 "Newsreader", Georgia, serif; text-align: center; }
+.lede { margin: 8px auto 0; max-width: 68ch; color: var(--muted); text-align: center; font-size: 0.98rem; }
+.clinical-disclaimer-banner { margin: 14px auto 0; max-width: 840px; padding: 8px 16px; background: #FFF9ED; border: 1px solid #F3DFBA; border-left: 4px solid var(--amber); border-radius: 8px; font-size: 0.82rem; color: #6B4900; display: inline-flex; align-items: center; text-align: left; gap: 10px; line-height: 1.45; }
+.disclaimer-badge { font-weight: 700; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.5px; padding: 2px 6px; background: #D9A23A; color: #FFFFFF; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
