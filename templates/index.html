@@ -70,6 +70,35 @@
     </div>
 
     <form id="risk-form" class="form" novalidate>
+      <div class="preset-section">
+        <div class="preset-header">
+          <span class="preset-title">Judge Quick-Demos (1-Click Presets)</span>
+          <span class="preset-hint">Instant 3D color transitions</span>
+        </div>
+        <div class="preset-buttons" role="group" aria-label="Demo Patient Presets">
+          <button type="button" class="preset-btn" data-preset="stemi" aria-pressed="false" title="Isolated anterior LAD occlusion (Stark White 3D Overdrive)">
+            <span class="preset-dot dot-stemi"></span>
+            <span class="preset-text">
+              <strong>High-Risk Anterior STEMI (LAD)</strong>
+              <small>Single-Territory Stark White 3D Overdrive</small>
+            </span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="multivessel" aria-pressed="false" title="Multi-vessel stenosis (White LAD, Cyan LCX, Gold RCA)">
+            <span class="preset-dot dot-multi"></span>
+            <span class="preset-text">
+              <strong>Multi-Vessel CAD</strong>
+              <small>Multi-Color Palette (LAD: White, LCX: Cyan, RCA: Gold)</small>
+            </span>
+          </button>
+          <button type="button" class="preset-btn" data-preset="healthy" aria-pressed="false" title="Healthy low-risk patient (Normal teal/green gradient)">
+            <span class="preset-dot dot-healthy"></span>
+            <span class="preset-text">
+              <strong>Healthy Baseline</strong>
+              <small>Normal / Baseline Soft Cyan/Teal Gradient</small>
+            </span>
+          </button>
+        </div>
+      </div>
       {% for group, fields in groups.items() %}
       <fieldset>
         <legend>{{ group }}</legend>
