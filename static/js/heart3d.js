@@ -216,12 +216,14 @@
     if (!info) {
       ahaHud.classList.remove('is-active');
       if (ahaVesselBadge) {
-        ahaVesselBadge.textContent = 'Interactive';
-        ahaVesselBadge.style.background = 'rgba(255, 255, 255, 0.12)';
+        ahaVesselBadge.textContent = 'AHA 17-Seg';
+        ahaVesselBadge.style.background = 'rgba(255, 255, 255, 0.15)';
         ahaVesselBadge.style.color = '#E2E8EA';
       }
-      if (ahaTitle) ahaTitle.textContent = 'Coronary Territory Map';
-      if (ahaWalls) ahaWalls.textContent = 'Hover or click LAD, LCX, or RCA to highlight exact supplied walls';
+      if (ahaTitle) ahaTitle.textContent = 'Hover Artery for Perfusion';
+      if (ahaWalls) ahaWalls.textContent = '';
+      if (ahaSegments) ahaSegments.textContent = '';
+      if (ahaRiskBadge) ahaRiskBadge.style.display = 'none';
       if (ahaMetaRow) ahaMetaRow.style.display = 'none';
       return;
     }
@@ -232,23 +234,26 @@
     const isHigh = arData ? (arData.p >= 0.55) : false;
 
     if (ahaVesselBadge) {
-      ahaVesselBadge.textContent = key + ' Territory';
-      ahaVesselBadge.style.background = isHigh ? '#B3263E' : 'rgba(255, 255, 255, 0.20)';
-      ahaVesselBadge.style.color = '#FFFFFF';
+      ahaVesselBadge.textContent = key;
+      ahaVesselBadge.style.background = isHigh ? '#B3263E' : '#1DD1A1';
+      ahaVesselBadge.style.color = isHigh ? '#FFFFFF' : '#0E2530';
     }
     if (ahaTitle) {
-      ahaTitle.textContent = key + ' \u2014 ' + info.name;
+      ahaTitle.textContent = info.walls;
     }
     if (ahaWalls) {
-      ahaWalls.innerHTML = '<strong>' + info.walls + '</strong>';
+      ahaWalls.textContent = info.name;
     }
     if (ahaSegments) {
-      ahaSegments.textContent = info.segments;
+      ahaSegments.textContent = info.segments.replace('AHA Segments ', 'Seg ');
     }
     if (ahaRiskBadge && prPct !== null) {
-      ahaRiskBadge.textContent = prPct + '% Risk' + (isHigh ? ' \u2022 HIGH RISK' : (arData.low ? ' \u2022 Low Conf' : ' \u2022 Moderate'));
+      ahaRiskBadge.style.display = 'inline-block';
+      ahaRiskBadge.textContent = prPct + '%' + (isHigh ? ' High Risk' : '');
       ahaRiskBadge.style.background = isHigh ? '#B3263E' : (arData.low ? '#A86500' : '#1DD1A1');
       ahaRiskBadge.style.color = isHigh || arData.low ? '#FFFFFF' : '#0E2530';
+    } else if (ahaRiskBadge) {
+      ahaRiskBadge.style.display = 'none';
     }
     if (ahaMetaRow) ahaMetaRow.style.display = 'flex';
   }
