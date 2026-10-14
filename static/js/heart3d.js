@@ -91,6 +91,22 @@
     el.className = 'tag';
     el.textContent = k;
     el.hidden = true;
+    el.style.pointerEvents = 'auto';
+    el.style.cursor = 'pointer';
+    el.addEventListener('pointerenter', () => {
+      hv = k;
+      dc();
+      updateAhaHud(k);
+    });
+    el.addEventListener('pointerleave', () => {
+      hv = null;
+      dc();
+      updateAhaHud(sl);
+    });
+    el.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      ap.select(k === sl ? null : k);
+    });
     lb.appendChild(el);
     ad[k].tag = el;
   });
@@ -151,7 +167,109 @@
 
   // events
   const ls = [];
-  let sl = null, lr = null;
+  let sl = null, lr = null, hv = null;
+
+  // AHA anatomical perfusion map
+  const AHA_DATA = {
+    LAD: {
+      name: 'Left Anterior Descending',
+      walls: 'Anterior & Anteroseptal Walls, Apex',
+      segments: 'AHA Segments 1, 2, 7, 8, 13, 14, 17',
+      glow: new THREE.Color(1.35, 1.95, 1.70), // bright illuminating anterior glow
+      vesselGlow: new THREE.Color(2.5, 2.5, 2.5)
+    },
+    LCX: {
+      name: 'Left Circumflex',
+      walls: 'Lateral & Posterior LV Walls',
+      segments: 'AHA Segments 5, 6, 11, 12, 16',
+      glow: new THREE.Color(1.15, 1.85, 2.30), // bright illuminating lateral glow
+      vesselGlow: new THREE.Color(2.2, 2.4, 2.5)
+    },
+    RCA: {
+      name: 'Right Coronary Artery',
+      walls: 'Inferior Wall, Right Ventricle & Inferoseptal',
+      segments: 'AHA Segments 3, 4, 9, 10, 15',
+      glow: new THREE.Color(2.20, 1.85, 1.15), // bright illuminating inferior glow
+      vesselGlow: new THREE.Color(2.5, 2.3, 1.8)
+    }
+  };
+
+  const ahaHud = document.getElementById('stage-aha-hud');
+  const ahaTitle = document.getElementById('aha-title');
+  const ahaWalls = document.getElementById('aha-walls');
+  const ahaSegments = document.getElementById('aha-segments');
+  const ahaVesselBadge = document.getElementById('aha-vessel-badge');
+  const ahaRiskBadge = document.getElementById('aha-risk-badge');
+  const ahaMetaRow = document.getElementById('aha-meta-row');
+
+  function updateAhaHud(key) {
+    if (!ahaHud) return;
+    const info = key ? AHA_DATA[key] : null;
+
+    // Update territory legend pills active state
+    document.querySelectorAll('.territory-pill').forEach((pill) => {
+      const isPill = (pill.dataset.territory === key);
+      pill.classList.toggle('is-active', isPill);
+      pill.setAttribute('aria-pressed', String(isPill));
+    });
+
+    if (!info) {
+      ahaHud.classList.remove('is-active');
+      if (ahaVesselBadge) {
+        ahaVesselBadge.textContent = 'Interactive';
+        ahaVesselBadge.style.background = 'rgba(255, 255, 255, 0.12)';
+        ahaVesselBadge.style.color = '#E2E8EA';
+      }
+      if (ahaTitle) ahaTitle.textContent = 'Coronary Territory Map';
+      if (ahaWalls) ahaWalls.textContent = 'Hover or click LAD, LCX, or RCA to highlight exact supplied walls';
+      if (ahaMetaRow) ahaMetaRow.style.display = 'none';
+      return;
+    }
+
+    ahaHud.classList.add('is-active');
+    const arData = (lr && lr[key]) ? lr[key] : null;
+    const prPct = arData ? Math.round(arData.p * 100) : null;
+    const isHigh = arData ? (arData.p >= 0.55) : false;
+
+    if (ahaVesselBadge) {
+      ahaVesselBadge.textContent = key + ' Territory';
+      ahaVesselBadge.style.background = isHigh ? '#B3263E' : 'rgba(255, 255, 255, 0.20)';
+      ahaVesselBadge.style.color = '#FFFFFF';
+    }
+    if (ahaTitle) {
+      ahaTitle.textContent = key + ' \u2014 ' + info.name;
+    }
+    if (ahaWalls) {
+      ahaWalls.innerHTML = '<strong>' + info.walls + '</strong>';
+    }
+    if (ahaSegments) {
+      ahaSegments.textContent = info.segments;
+    }
+    if (ahaRiskBadge && prPct !== null) {
+      ahaRiskBadge.textContent = prPct + '% Risk' + (isHigh ? ' \u2022 HIGH RISK' : (arData.low ? ' \u2022 Low Conf' : ' \u2022 Moderate'));
+      ahaRiskBadge.style.background = isHigh ? '#B3263E' : (arData.low ? '#A86500' : '#1DD1A1');
+      ahaRiskBadge.style.color = isHigh || arData.low ? '#FFFFFF' : '#0E2530';
+    }
+    if (ahaMetaRow) ahaMetaRow.style.display = 'flex';
+  }
+
+  // Legend territory pill listeners
+  document.querySelectorAll('.territory-pill').forEach((pill) => {
+    const k = pill.dataset.territory;
+    pill.addEventListener('pointerenter', () => {
+      hv = k;
+      dc();
+      updateAhaHud(k);
+    });
+    pill.addEventListener('pointerleave', () => {
+      hv = null;
+      dc();
+      updateAhaHud(sl);
+    });
+    pill.addEventListener('click', () => {
+      ap.select(k === sl ? null : k);
+    });
+  });
 
   // coloring
   function dc() {
@@ -165,8 +283,6 @@
     if (d2) highRiskList.push('LCX');
     if (d3) highRiskList.push('RCA');
 
-    // Distinct palettes:
-    // Pure White uses HDR overdrive (5.0, 5.0, 5.0) which forces all red/blue pixels to pure 100% white!
     const COLOR_WHITE = {
       vesselColor: new THREE.Color(6.5, 6.5, 6.5),
       myoColor: new THREE.Color(4.5, 4.5, 4.5),
@@ -188,39 +304,39 @@
 
     const highlightConfig = {};
     if (highRiskList.length === 1) {
-      // Single high-risk territory -> pure white highlight
       highlightConfig[highRiskList[0]] = COLOR_WHITE;
     } else if (highRiskList.length >= 2) {
-      // Multiple high-risk territories -> each gets a distinct color
       if (d1) highlightConfig['LAD'] = COLOR_WHITE;
       if (d2) highlightConfig['LCX'] = (d1 ? COLOR_CYAN : COLOR_WHITE);
       if (d3) highlightConfig['RCA'] = (d1 && d2 ? COLOR_GOLD : (d1 || d2 ? COLOR_CYAN : COLOR_WHITE));
     }
     currentDamageHighlights = highlightConfig;
 
+    const ak = hv || sl; // active inspected territory (hover takes precedence, fallback to selected)
+
     if (hm && ca && tg) {
       const arr = ca.array;
 
-      // Color lookup table:
-      // Index 0: Normal myocardium -> 1.0 (original texture)
-      // Index 1: LAD vessel
-      // Index 2: LCX vessel
-      // Index 3: RCA vessel
-      // Index 4: LAD supplied myocardium
-      // Index 5: LCX supplied myocardium
-      // Index 6: RCA supplied myocardium
       const normalCol = new THREE.Color(1.0, 1.0, 1.0);
-      const selVesselCol = new THREE.Color(2.2, 2.2, 2.2);
-      const selMyoCol = new THREE.Color(1.5, 1.5, 1.5);
+
+      // Determine vessel colors
+      const vLAD = highlightConfig['LAD'] ? highlightConfig['LAD'].vesselColor : (ak === 'LAD' ? AHA_DATA.LAD.vesselGlow : rc(p1));
+      const vLCX = highlightConfig['LCX'] ? highlightConfig['LCX'].vesselColor : (ak === 'LCX' ? AHA_DATA.LCX.vesselGlow : rc(p2));
+      const vRCA = highlightConfig['RCA'] ? highlightConfig['RCA'].vesselColor : (ak === 'RCA' ? AHA_DATA.RCA.vesselGlow : rc(p3));
+
+      // Determine supplied myocardium colors (highlights exact supplied walls)
+      const mLAD = highlightConfig['LAD'] ? highlightConfig['LAD'].myoColor : (ak === 'LAD' ? AHA_DATA.LAD.glow : normalCol);
+      const mLCX = highlightConfig['LCX'] ? highlightConfig['LCX'].myoColor : (ak === 'LCX' ? AHA_DATA.LCX.glow : normalCol);
+      const mRCA = highlightConfig['RCA'] ? highlightConfig['RCA'].myoColor : (ak === 'RCA' ? AHA_DATA.RCA.glow : normalCol);
 
       const tc = [
-        normalCol,
-        highlightConfig['LAD'] ? highlightConfig['LAD'].vesselColor : (sl === 'LAD' ? selVesselCol : rc(p1)),
-        highlightConfig['LCX'] ? highlightConfig['LCX'].vesselColor : (sl === 'LCX' ? selVesselCol : rc(p2)),
-        highlightConfig['RCA'] ? highlightConfig['RCA'].vesselColor : (sl === 'RCA' ? selVesselCol : rc(p3)),
-        highlightConfig['LAD'] ? highlightConfig['LAD'].myoColor : (sl === 'LAD' ? selMyoCol : normalCol),
-        highlightConfig['LCX'] ? highlightConfig['LCX'].myoColor : (sl === 'LCX' ? selMyoCol : normalCol),
-        highlightConfig['RCA'] ? highlightConfig['RCA'].myoColor : (sl === 'RCA' ? selMyoCol : normalCol)
+        normalCol, // Tag 0: baseline non-coronary structures
+        vLAD,      // Tag 1: LAD vessel trace
+        vLCX,      // Tag 2: LCX vessel trace
+        vRCA,      // Tag 3: RCA vessel trace
+        mLAD,      // Tag 4: LAD supplied myocardium (Anterior/Septal & Apex)
+        mLCX,      // Tag 5: LCX supplied myocardium (Lateral/Posterior LV)
+        mRCA       // Tag 6: RCA supplied myocardium (Inferior/RV & Inferoseptal)
       ];
 
       for (let i = 0; i < tg.length; i++) {
@@ -235,7 +351,7 @@
     // Update floating tags on heart
     ['LAD', 'LCX', 'RCA'].forEach((k) => {
       const it = ad[k];
-      const is = (k === sl);
+      const is = (k === ak);
       const pr = r[k] ? r[k].p : 0;
       const dg = highlightConfig[k];
 
@@ -252,15 +368,15 @@
         } else if (k === 'LCX' || k === 'RCA') {
           it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% (Low conf)';
           it.tag.style.setProperty('--c', '#FF9F43');
-          it.tag.style.background = 'rgba(14, 37, 48, 0.88)';
-          it.tag.style.color = '#FFFFFF';
-          it.tag.style.boxShadow = '';
+          it.tag.style.background = is ? '#FFFFFF' : 'rgba(14, 37, 48, 0.88)';
+          it.tag.style.color = is ? '#0E2530' : '#FFFFFF';
+          it.tag.style.boxShadow = is ? '0 0 10px #FF9F43' : '';
         } else {
           it.tag.textContent = k + ' ' + Math.round(pr * 100) + '% (Normal)';
           it.tag.style.setProperty('--c', '#1DD1A1');
-          it.tag.style.background = 'rgba(14, 37, 48, 0.88)';
-          it.tag.style.color = '#FFFFFF';
-          it.tag.style.boxShadow = '';
+          it.tag.style.background = is ? '#FFFFFF' : 'rgba(14, 37, 48, 0.88)';
+          it.tag.style.color = is ? '#0E2530' : '#FFFFFF';
+          it.tag.style.boxShadow = is ? '0 0 10px #1DD1A1' : '';
         }
       }
     });
@@ -270,12 +386,14 @@
   ap.select = (k) => {
     sl = k || null;
     dc();
+    updateAhaHud(hv || sl);
     ls.forEach((f) => f(sl));
   };
   ap.onSelect = (f) => ls.push(f);
   ap.setRisks = (r) => {
     lr = r;
     dc();
+    updateAhaHud(hv || sl);
   };
 
   // raycaster
@@ -307,12 +425,29 @@
   });
 
   cv.addEventListener('pointermove', (e) => {
-    if (!dn) { cv.style.cursor = ht(e) ? 'pointer' : ''; return; }
+    if (!dn) {
+      const k = ht(e);
+      cv.style.cursor = k ? 'pointer' : '';
+      if (k !== hv) {
+        hv = k;
+        dc();
+        updateAhaHud(hv || sl);
+      }
+      return;
+    }
     const dx = e.clientX - dn.x, dy = e.clientY - dn.y;
     if (Math.hypot(dx, dy) > 4) { dn.m = true; inx = true; }
     if (dn.m) {
       gp.rotation.y = dn.ry + dx * 0.008;
       gp.rotation.x = cp(dn.rx + dy * 0.006, -0.85, 0.85);
+    }
+  });
+
+  cv.addEventListener('pointerleave', () => {
+    if (hv !== null) {
+      hv = null;
+      dc();
+      updateAhaHud(sl);
     }
   });
 

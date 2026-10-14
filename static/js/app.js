@@ -234,15 +234,84 @@
     updateSelection(ky);
   }));
 
-  // submission
-  f.addEventListener('submit', (ev) => { ev.preventDefault(); pd(); });
+  // 1-Click Demo Patient Presets for Judges
+  const PRESETS = {
+    stemi: {
+      name: 'High-Risk Anterior STEMI (LAD)',
+      values: {
+        age: 50, sex: 1, bmi: 24.5, dm: 0, htn: 0, smoker: 0,
+        bp: 120, typical_cp: 1, atypical_cp: 0, t_inversion: 1, ef: 48, rwma: 1
+      }
+    },
+    multivessel: {
+      name: 'Multi-Vessel CAD',
+      values: {
+        age: 68, sex: 1, bmi: 31.5, dm: 1, htn: 1, smoker: 1,
+        bp: 165, typical_cp: 1, atypical_cp: 0, t_inversion: 1, ef: 30, rwma: 3
+      }
+    },
+    healthy: {
+      name: 'Healthy Baseline',
+      values: {
+        age: 32, sex: 0, bmi: 21.5, dm: 0, htn: 0, smoker: 0,
+        bp: 110, typical_cp: 0, atypical_cp: 0, t_inversion: 0, ef: 62, rwma: 0
+      }
+    }
+  };
+
+  function applyPreset(presetKey) {
+    const preset = PRESETS[presetKey];
+    if (!preset) return;
+
+    // Populate all form controls
+    Object.entries(preset.values).forEach(([fieldId, val]) => {
+      const input = f.querySelector(`[data-field="${fieldId}"]`);
+      if (input) {
+        input.value = val;
+      }
+    });
+
+    // Update preset button active states
+    document.querySelectorAll('.preset-btn').forEach((btn) => {
+      const isActive = btn.dataset.preset === presetKey;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+
+    // Reset specific artery selection to show general overview
+    s = null;
+    r.forEach((rw) => rw.setAttribute('aria-pressed', 'false'));
+    if (window.Heart3D && window.Heart3D.select) {
+      window.Heart3D.select(null);
+    }
+
+    // Trigger instant prediction and 3D visual update
+    pd();
+  }
+
+  // Preset button listeners
+  document.querySelectorAll('.preset-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyPreset(btn.dataset.preset);
+    });
+  });
+
+  // Clear active preset state if user manually modifies any field
+  function clearPresetActiveState() {
+    document.querySelectorAll('.preset-btn').forEach((btn) => {
+      btn.classList.remove('is-active');
+      btn.setAttribute('aria-pressed', 'false');
+    });
+  }
 
   // autosync
   function triggerAutoSync() {
+    clearPresetActiveState();
     if (!rs) return;
     clearTimeout(tm);
     tm = setTimeout(pd, 300);
   }
+  f.addEventListener('submit', (ev) => { ev.preventDefault(); pd(); });
   f.addEventListener('input', triggerAutoSync);
   f.addEventListener('change', triggerAutoSync);
 
