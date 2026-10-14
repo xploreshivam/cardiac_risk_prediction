@@ -136,6 +136,7 @@ cardiac-3d-risk/
 ├── requirements.txt            # Python dependencies
 ├── docs/
 │   ├── architecture_flow.md    # System Runtime Architecture Flowchart (How project works)
+│   ├── BENCHMARK_REPORT.md     # RF vs. XGBoost / GradientBoosting / Calibration evaluation
 │   └── PROJECT_BUILD_GUIDE.md  # Step-by-step scratch-to-deployment roadmap
 ├── data/
 │   └── raw/                    # Extension of Z-Alizadeh Sani clinical dataset (.xlsx)
@@ -149,6 +150,7 @@ cardiac-3d-risk/
 │   ├── config.py               # Feature definitions, normal ranges, and file paths
 │   ├── data.py                 # Type-safe parsing, imputation, and feature extraction
 │   ├── train.py                # 5-fold cross-validation & model training script
+│   ├── benchmark.py            # Model comparison & probability calibration benchmark
 │   └── predict.py              # Strict schema/range validation & inference engine
 ├── templates/
 │   └── index.html              # Main interactive 3D clinical diagnostic workspace
