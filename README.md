@@ -63,10 +63,11 @@ graph TD
     end
 
     %% PHASE 2: ML
-    subgraph P2 ["Phase 2: ML Pipeline & Stratified Validation"]
+    subgraph P2 ["Phase 2: ML Pipeline, Benchmarking & Explainable AI"]
         A3 --> B1["Pipeline Design<br/>(StandardScaler + Balanced Random Forest)"]
         B1 --> B2["5-Fold Stratified Cross-Validation<br/>(Accuracy, ROC-AUC, Recall Optimization)"]
-        B2 --> B3["Model Serialization<br/>(Export .pkl Models & model_metrics.json)"]
+        B2 --> B2B["Model Benchmarking & Calibration<br/>(RF vs. XGBoost / GradientBoosting / Calibrated)"]
+        B2B --> B3["Model & Explainer Serialization<br/>(Export .pkl Models, SHAP & model_metrics.json)"]
     end
 
     %% PHASE 3: 3D ASSETS
@@ -77,18 +78,18 @@ graph TD
 
     %% PHASE 4: BACKEND
     subgraph P4 ["Phase 4: Defensive Flask Backend & Error Handling"]
-        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /health)"]
+        B3 --> D1["Flask Application Architecture<br/>(Endpoints: /, /api/predict, /api/metrics, /health)"]
         D1 --> D2["Defensive Input Validation Layer<br/>(isinstance dict, math.isfinite, Bounds Check)"]
         D2 --> D3["Standardized JSON Error Handlers<br/>(HTTP 400, 405, 415, 422, 500)"]
     end
 
     %% PHASE 5: FRONTEND
-    subgraph P5 ["Phase 5: Interactive WebGL Frontend & UI Synchronization"]
-        D3 --> E1["Responsive Clinical UI<br/>(index.html, style.css, ARIA Progressbars)"]
-        C3 --> E2["Three.js WebGL Engine<br/>(OrbitControls, AnimationMixer, Raycaster, Billboard Tags)"]
-        E1 --> E3["Dual-Feedback Diagnostic System"]
+    subgraph P5 ["Phase 5: Interactive WebGL Frontend & Multi-Modal Diagnostics"]
+        D3 --> E1["Responsive Clinical UI & 1-Click Presets<br/>(STEMI LAD | Multi-Vessel | Healthy Baseline)"]
+        C3 --> E2["Three.js WebGL Engine<br/>(AHA Perfusion HUD, 3D Risk Legend, Raycaster)"]
+        E1 --> E3["Multi-Modal Diagnostic Feedback"]
         E2 --> E3
-        E3 --> E4["3D GPU Shading: White (Single) / Multi-Color (Multi)<br/>UI Readout: Medical Red #E63946 Alert Bars & 3D Color Pills"]
+        E3 --> E4["3D GPU Shading (White/Multi-Color) + Wall Illumination<br/>UI: Medical Red Alert Bars & SHAP Divergent Bar Chart"]
     end
 
     %% PHASE 6: DEPLOYMENT
